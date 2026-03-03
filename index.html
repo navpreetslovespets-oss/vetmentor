@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VetMentor — Clinical Training Platform · Supertails</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#f7f6f3;font-family:'DM Sans',system-ui,sans-serif;color:#1a1916}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:#f7f6f3}
+::-webkit-scrollbar-thumb{background:#d1cec5;border-radius:10px}
+input,button,textarea,select{font-family:'DM Sans',system-ui,sans-serif}
+input:focus,textarea:focus{outline:none!important}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse3{0%,80%,100%{opacity:.25;transform:scale(.7)}40%{opacity:1;transform:scale(1)}}
+@keyframes toastIn{from{transform:translateX(120%)}to{transform:translateX(0)}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useRef, useEffect } = React;
+
+// ─── SEED DATA ──────────────────────────────────────────────────────────────
+const USERS_DB = [
+  { id:"u1", name:"Dr. Priya Sharma",  email:"priya@supertails.com",   password:"vet123",   role:"vet",   clinic:"Koramangala",  avatar:"PS", color:"#7c6af7" },
+  { id:"u2", name:"Dr. Arjun Mehta",   email:"arjun@supertails.com",   password:"vet123",   role:"vet",   clinic:"Banashankari", avatar:"AM", color:"#0ea5e9" },
+  { id:"u3", name:"Dr. Kavita Rao",    email:"kavita@supertails.com",  password:"vet123",   role:"vet",   clinic:"Brookefield",  avatar:"KR", color:"#10b981" },
+  { id:"u4", name:"Dr. Ravi Nair",     email:"ravi@supertails.com",    password:"vet123",   role:"vet",   clinic:"Bannerghatta", avatar:"RN", color:"#f59e0b" },
+  { id:"u5", name:"Dr. Bhumika",       email:"bhumika@supertails.com", password:"admin123", role:"admin", clinic:"All Clinics",  avatar:"DB", color:"#ef4444" },
+  { id:"u6", name:"Navpreet",          email:"navpreet@supertails.com",password:"admin123", role:"admin", clinic:"HQ",           avatar:"NP", color:"#8b5cf6" },
+];
+
+const ALL_TOPICS = ["Endocrinology","Cardiology","Dermatology","Gastroenterology","Nephrology & Urology","Neurology","Oncology","Respiratory","Infectious Disease","Emergency & Critical Care","Ophthalmology","Orthopedics","Hematology","Clinical Reasoning","Reproduction"];
+const TOPIC_ICONS = {"Endocrinology":"⚗️","Cardiology":"❤️","Dermatology":"🔬","Gastroenterology":"🫁","Nephrology & Urology":"💧","Neurology":"🧠","Oncology":"🎗️","Respiratory":"🫀","Infectious Disease":"🦠","Emergency & Critical Care":"🚨","Ophthalmology":"👁️","Orthopedics":"🦴","Hematology":"🩸","Clinical Reasoning":"💡","Reproduction":"🌿"};
+
+const SEED_CASES = [
+  { id:"c1", topic:"Endocrinology", species:"Dog", breed:"Labrador Retriever", difficulty:"Intermediate", title:"Polyuria & Polydipsia in a 9-year-old Lab", signalment:"9-year-old MN Labrador Retriever, 38 kg", presenting_complaint:"Owner reports excessive drinking and urinating for 6 weeks. Mild lethargy.", history:"Indoor, vaccinated, no medications, commercial dry diet.", physical_exam:"BCS 4/9, bilateral flank alopecia, pot-bellied appearance, thin skin, HR 88, Temp 38.6°C.", diagnostics:{CBC:"Mature neutrophilia 12,000/μL",Chemistry:"ALP ↑↑ 1200 U/L, ALT 180, Cholesterol 9.2 mmol/L, Glucose normal",Urinalysis:"USG 1.008, no glucosuria",Ultrasound:"Bilateral adrenal enlargement (R:9mm, L:8.5mm)"}, reference:"Ettinger 9th Ed, Ch. 52", diagnosis:"Hyperadrenocorticism (PDH)" },
+  { id:"c2", topic:"Emergency & Critical Care", species:"Dog", breed:"German Shepherd", difficulty:"Advanced", title:"Acute Collapse & Abdominal Distension in GSD", signalment:"4-year-old MI German Shepherd, 34 kg", presenting_complaint:"Non-productive retching and abdominal distension 2 hours ago. Now collapsed, pale gums.", history:"Fed large meal 3 hours ago. Active working dog.", physical_exam:"HR 160 weak/thready, RR 40 laboured, MM pale, CRT >3s, Temp 37.1°C, tympanic abdomen.", diagnostics:{CBC:"PCV 58%, WBC 18,000 stress",Chemistry:"Lactate 7.2 mmol/L",Radiology:"Classic double bubble sign",ECG:"VPCs noted"}, reference:"Ettinger 9th Ed, Ch. 87", diagnosis:"Gastric Dilatation-Volvulus" },
+  { id:"c3", topic:"Cardiology", species:"Dog", breed:"CKCS", difficulty:"Intermediate", title:"Exercise Intolerance & Cough in a Cavalier", signalment:"8-year-old MN CKCS, 8.2 kg", presenting_complaint:"Progressive exercise intolerance, nocturnal cough, occasional syncope for 3 months.", history:"Grade 2/6 murmur noted 2 years ago. No treatment.", physical_exam:"Grade 5/6 left apical systolic murmur, bilateral pulmonary crackles, RR 36, ascites.", diagnostics:{Radiology:"Cardiomegaly, perihilar interstitial pattern",Echo:"LA:Ao 2.1, severe MR, LVIDDN 2.2",NT_proBNP:"3200 pmol/L"}, reference:"Ettinger 9th Ed, Ch. 67; ACVIM 2019", diagnosis:"MMVD Stage C — CHF" },
+  { id:"c4", topic:"Dermatology", species:"Dog", breed:"Labrador Retriever", difficulty:"Beginner", title:"Recurrent Otitis & Pruritus in a Young Lab", signalment:"3-year-old FN Labrador, 30 kg", presenting_complaint:"Recurrent bilateral otitis, paw licking, ventral pruritus. Third episode this year.", history:"Worse in summer. Temporary response to steroids.", physical_exam:"Erythematous pinna bilaterally, brown waxy discharge, interdigital erythema.", diagnostics:{Cytology:"Malassezia 3+, cocci 2+",Scrape:"Negative",IDT:"Positive: HDM, storage mites"}, reference:"Ettinger 9th Ed, Ch. 89", diagnosis:"Canine Atopic Dermatitis with secondary Malassezia" },
+  { id:"c5", topic:"Nephrology & Urology", species:"Cat", breed:"Persian", difficulty:"Advanced", title:"Vomiting & Azotemia in a Senior Persian", signalment:"12-year-old MN Persian, 3.8 kg", presenting_complaint:"Vomiting 4-5x/day for 2 weeks, decreased appetite, weight loss.", history:"Not previously evaluated. Indoor. Dry kibble only.", physical_exam:"BCS 3/9, dehydrated 8%, oral ulcers, small irregular kidneys.", diagnostics:{CBC:"Non-regen anemia PCV 22%",Chemistry:"Creatinine 6.8 mg/dL, BUN 112, Phos 8.2",Urinalysis:"USG 1.014, protein 2+",BP:"185 mmHg"}, reference:"Ettinger 9th Ed, Ch. 57; IRIS Staging", diagnosis:"CKD IRIS Stage 4 with hypertension" },
+  { id:"c6", topic:"Hematology", species:"Dog", breed:"Cocker Spaniel", difficulty:"Advanced", title:"Collapse & Pale Gums in a Cocker Spaniel", signalment:"6-year-old FS Cocker Spaniel, 12 kg", presenting_complaint:"Found collapsed at home. Pale gums, rapid breathing.", history:"No prior illness, no medications.", physical_exam:"HR 180, MM pale/white, CRT 3s, weak femoral pulses, splenomegaly.", diagnostics:{CBC:"PCV 12%, spherocytes ++, autoagglutination +",Coombs:"Positive",Chemistry:"Bilirubin 3.2 mg/dL"}, reference:"Ettinger 9th Ed, Ch. 112", diagnosis:"Immune-Mediated Hemolytic Anemia" },
+  { id:"c7", topic:"Infectious Disease", species:"Dog", breed:"Mixed Breed", difficulty:"Intermediate", title:"Fever, Petechiae & Tick Exposure in Karnataka", signalment:"3-year-old MN Mixed Breed, 22 kg, rural Karnataka", presenting_complaint:"Fever 40.5°C, lethargy, petechiae on gums and ventral abdomen.", history:"Heavy tick burden 3 weeks ago. No prevention.", physical_exam:"Temp 40.5°C, petechiae, epistaxis, splenomegaly.", diagnostics:{CBC:"Platelets 18,000/μL, leukopenia",Smear:"Morulae in monocytes",Serology:"Ehrlichia canis IFA 1:1280"}, reference:"Ettinger 9th Ed, Ch. 98", diagnosis:"Canine Monocytic Ehrlichiosis" },
+  { id:"c8", topic:"Neurology", species:"Dog", breed:"Dachshund", difficulty:"Intermediate", title:"Acute Hindlimb Paresis in a Dachshund", signalment:"5-year-old MN Mini Dachshund, 6.2 kg", presenting_complaint:"Sudden inability to walk on hind legs this morning. Normal last night.", history:"Occasional back pain. Jumped off sofa 2 days ago.", physical_exam:"Paraparesis grade 3/5, decreased proprioception, intact deep pain, T11-T12 pain.", diagnostics:{Neuro:"Intact nociception, absent proprioception",MRI:"T11-T12 Hansen Type I IVDD with cord compression"}, reference:"Ettinger 9th Ed, Ch. 79", diagnosis:"Hansen Type I IVDD T11-T12" },
+];
+
+const SEED_QUESTIONS = [
+  { id:"q1", topic:"Endocrinology", difficulty:"Intermediate", species:"Dog", question:"9-year-old dog: PU/PD, pot-bellied, ALP 1200 U/L, bilateral adrenal enlargement. Best NEXT diagnostic test?", options:["ACTH stimulation test","Low-dose dexamethasone suppression test (LDDST)","Urine cortisol:creatinine ratio","Abdominal CT scan"], correct:1, reference:"Ettinger 9th Ed, Ch. 52", explanation:"LDDST is the gold-standard screening test for HAC (~95% sensitivity). ACTH stim is for treatment monitoring. UCCR screens but lacks specificity. CT comes after biochemical confirmation.", wrong:{0:"ACTH stim is for treatment monitoring post-trilostane, not screening.",2:"UCCR is high sensitivity but low specificity — not confirmatory.",3:"Imaging after biochemical confirmation only."} },
+  { id:"q2", topic:"Emergency & Critical Care", difficulty:"Advanced", species:"Dog", question:"GDV confirmed. HR 160, weak pulses, pale MMs, CRT >3s. Immediate priority?", options:["Emergency surgery immediately","IV fluid resuscitation (large-bore catheters)","Gastric decompression via trocar","Anti-arrhythmics for VPCs"], correct:1, reference:"Ettinger 9th Ed, Ch. 87", explanation:"Cardiovascular stabilization BEFORE surgery. Two large-bore IVs, isotonic crystalloids at shock dose. Surgery on decompensated patient = high mortality.", wrong:{0:"Surgery without fluid support dramatically increases mortality.",2:"Decompression may help but IV fluids for cardiovascular collapse come first.",3:"Fluids often resolve VPCs — anti-arrhythmics are second-line."} },
+  { id:"q3", topic:"Cardiology", difficulty:"Intermediate", species:"Dog", question:"MMVD Stage C dog (active CHF). Which is NOT part of standard initial management?", options:["Furosemide","Pimobendan","Enalapril","Digoxin as first-line agent"], correct:3, reference:"Ettinger 9th Ed, Ch. 67; ACVIM 2019", explanation:"Standard Stage C: furosemide + pimobendan + ACE inhibitor. Digoxin is not first-line in MMVD CHF — reserved for rate control in refractory supraventricular tachycardias.", wrong:{0:"Furosemide essential for diuresis.",1:"Pimobendan improves contractility — core therapy.",2:"ACE inhibitor is standard CHF management."} },
+  { id:"q4", topic:"Hematology", difficulty:"Advanced", species:"Dog", question:"IMHA: PCV 12%, spherocytes ++, autoagglutination +, Coombs +. First-line treatment?", options:["Blood transfusion alone","Immunosuppression (prednisolone 2mg/kg) + transfusion if needed","Splenectomy","Azathioprine monotherapy"], correct:1, reference:"Ettinger 9th Ed, Ch. 112", explanation:"Immunosuppression first — prednisolone 2mg/kg/day. Transfusion only if critically anaemic with decompensation. Splenectomy is second-line for refractory cases.", wrong:{0:"Transfusion without immunosuppression doesn't address destruction.",2:"Splenectomy is second-line, not first.",3:"Azathioprine is adjunctive, takes weeks — cannot be used alone."} },
+  { id:"q5", topic:"Nephrology & Urology", difficulty:"Advanced", species:"Cat", question:"IRIS Stage 4 CKD cat, BP 185 mmHg. First antihypertensive of choice?", options:["Amlodipine","Enalapril","Atenolol","Telmisartan"], correct:0, reference:"Ettinger 9th Ed, Ch. 57; IRIS Hypertension Guidelines", explanation:"Amlodipine (calcium channel blocker) is first-line in cats. RAAS plays less role in feline hypertension. ACE inhibitors may be added for proteinuria but not first-line for BP control.", wrong:{1:"ACE inhibitors reduce proteinuria but not first-line antihypertensives in cats.",2:"Beta-blockers are not effective antihypertensives in cats.",3:"Telmisartan is a good option but second-line after amlodipine."} },
+  { id:"q6", topic:"Dermatology", difficulty:"Beginner", species:"Dog", question:"Seasonal pruritus, bilateral otitis, paw licking. Ear cytology: Malassezia 3+. Primary diagnosis?", options:["Primary Malassezia otitis","Canine Atopic Dermatitis with secondary Malassezia","Food hypersensitivity","Sarcoptic mange"], correct:1, reference:"Ettinger 9th Ed, Ch. 89", explanation:"Seasonal multi-site pruritus + Malassezia overgrowth = Canine Atopy. Malassezia is secondary. Treat the atopy, not just the ear.", wrong:{0:"Malassezia is secondary to immune dysregulation.",2:"Food allergy is non-seasonal.",3:"Sarcoptic mange: whole-body pruritus with positive mites on scrape."} },
+  { id:"q7", topic:"Infectious Disease", difficulty:"Intermediate", species:"Dog", question:"Karnataka dog: fever 40.5°C, thrombocytopenia, petechiae, morulae in monocytes. Treatment?", options:["Amoxicillin-clavulanate","Doxycycline 10mg/kg/day for minimum 28 days","Metronidazole","Supportive care only"], correct:1, reference:"Ettinger 9th Ed, Ch. 98", explanation:"Ehrlichia canis = doxycycline minimum 28 days. Shorter courses cause relapse. Platelets recover within 24-48 hours. Critical in tropical India.", wrong:{0:"Beta-lactams have no activity against intracellular Ehrlichia.",2:"Metronidazole has no activity against Ehrlichia.",3:"Without doxycycline, chronic Ehrlichiosis and bone marrow failure develop."} },
+  { id:"q8", topic:"Neurology", difficulty:"Intermediate", species:"Dog", question:"Dachshund: acute hindlimb paresis, intact deep pain, IVDD on MRI. Surgery unavailable. Best medical management?", options:["Strict cage rest + corticosteroids","Strict cage rest + NSAIDs (never combine with steroids)","Physiotherapy immediately","Gabapentin alone"], correct:1, reference:"Ettinger 9th Ed, Ch. 79", explanation:"Strict cage rest 4-6 weeks essential. NSAIDs for analgesia. NEVER combine steroids + NSAIDs (fatal GI ulceration). Intact deep pain = good prognosis medically.", wrong:{0:"Combining steroids + NSAIDs can cause fatal GI perforation.",2:"Physiotherapy during acute phase worsens spinal cord injury.",3:"Gabapentin alone doesn't address spinal inflammation."} },
+];
+
+const SEED_FEED_POSTS = [
+  { id:"fp1", authorId:"u1", authorName:"Dr. Priya Sharma", authorClinic:"Koramangala", authorColor:"#7c6af7", authorAvatar:"PS", date:"2025-01-28T09:15:00Z", title:"Suspected Parvovirus — Rapid Recovery", species:"Dog", breed:"Unvaccinated Indie Puppy, 8 weeks", chiefComplaint:"Severe haemorrhagic diarrhoea, vomiting, obtunded on presentation", clinicalFindings:"HR 180, MM pale/tacky, CRT 2.5s, Temp 38.1°C (low-normal). Severe dehydration estimated 10%.", diagnosticsSummary:"Parvo ELISA: Positive. CBC: Severe leukopenia (WBC 1200), lymphopenia. PCV 48% (haemoconcentrated).", management:"Aggressive IV fluid resuscitation (0.9% NaCl + KCl correction). Ampicillin + Metronidazole. Antiemetics (Maropitant). Nutritional support via NJ tube day 2.", outcome:"Discharged day 5. WBC normalised day 4. Owner counselled on vaccination.", learningPoint:"Early aggressive supportive care is the cornerstone of parvo management. Leukopenia with haemorrhagic diarrhoea in unvaccinated puppy = parvo until proven otherwise.", tags:["Infectious Disease","Emergency","Puppy"], reactions:{ "❤️":8,"🧠":5,"👏":6 }, comments:[ { id:"rc1", authorId:"u2", authorName:"Dr. Arjun Mehta", avatar:"AM", color:"#0ea5e9", text:"Great case! Did you use any hyperimmune serum or just supportive?", date:"2025-01-28T11:00:00Z" }, { id:"rc2", authorId:"u3", authorName:"Dr. Kavita Rao", avatar:"KR", color:"#10b981", text:"We had a similar one last month — the NJ tube made a huge difference in recovery speed.", date:"2025-01-28T12:30:00Z" } ] },
+  { id:"fp2", authorId:"u2", authorName:"Dr. Arjun Mehta", authorClinic:"Banashankari", authorColor:"#0ea5e9", authorAvatar:"AM", date:"2025-01-25T14:30:00Z", title:"Tick Paralysis — Easy to Miss!", species:"Dog", breed:"Beagle, 3 years", chiefComplaint:"Acute ascending LMN paralysis, owner thought the dog had 'slipped a disc'", clinicalFindings:"Flaccid tetraparesis, absent reflexes all four limbs, normal mentation, no pain. Found attached Ixodes tick at base of skull on close inspection.", diagnosticsSummary:"Clinical diagnosis — ascending LMN paralysis with tick identified. No imaging needed. CBC/chemistry: unremarkable.", management:"Tick removed under magnification (complete removal critical — no mouthpart left). Supportive care. Respiratory monitoring.", outcome:"Gradual improvement within 24-48 hours. Full recovery by day 5.", learningPoint:"Tick paralysis is caused by a neurotoxin in tick saliva. Flaccid LMN paralysis without pain = look for a tick before ordering MRI! Always examine the entire skin surface.", tags:["Neurology","Infectious Disease","Clinical Pearl"], reactions:{ "❤️":12,"🧠":9,"👏":7 }, comments:[ { id:"rc3", authorId:"u1", authorName:"Dr. Priya Sharma", avatar:"PS", color:"#7c6af7", text:"This is such a good reminder. We missed a tick paralysis once and went straight to MRI!", date:"2025-01-25T16:00:00Z" } ] },
+];
+
+// ─── STORAGE ─────────────────────────────────────────────────────────────────
+const store = {
+  get: (k) => { try { const v = localStorage.getItem("vm_"+k); return v ? JSON.parse(v) : null; } catch { return null; } },
+  set: (k, v) => { try { localStorage.setItem("vm_"+k, JSON.stringify(v)); } catch {} },
+};
+
+// ─── GEMINI API + RATE LIMITING ──────────────────────────────────────────────
+const GEMINI_MODEL = "gemini-2.0-flash";
+const DAILY_LIMIT = 30;        // max API calls per user per day
+const PER_CALL_MAX_TOKENS = 1024;
+
+function getUsageKey(userId) { return "usage_"+userId+"_"+new Date().toISOString().slice(0,10); }
+function getUserUsage(userId) { const d = store.get(getUsageKey(userId)); return d || { count:0, tokens:0 }; }
+function incrementUsage(userId, tok) { const k=getUsageKey(userId), c=getUserUsage(userId); store.set(k, {count:c.count+1, tokens:c.tokens+(tok||0)}); }
+function canUseAPI(userId) { return getUserUsage(userId).count < DAILY_LIMIT; }
+function getRemainingCalls(userId) { return Math.max(0, DAILY_LIMIT - getUserUsage(userId).count); }
+function getGeminiKey() { return localStorage.getItem("vm_gemini_key") || ""; }
+function setGeminiKey(k) { localStorage.setItem("vm_gemini_key", k); }
+
+async function callGemini(systemPrompt, userMessage, userId) {
+  const key = getGeminiKey();
+  if (!key) throw new Error("NO_KEY");
+  if (!canUseAPI(userId)) throw new Error("RATE_LIMITED");
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent?key="+key;
+  const body = {
+    system_instruction: { parts: [{ text: systemPrompt }] },
+    contents: Array.isArray(userMessage)
+      ? userMessage.map(m => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] }))
+      : [{ role: "user", parts: [{ text: userMessage }] }],
+    generationConfig: { maxOutputTokens: PER_CALL_MAX_TOKENS, temperature: 0.7 }
+  };
+  const res = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body) });
+  if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e?.error?.message || "API error "+res.status); }
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  incrementUsage(userId, data?.usageMetadata?.totalTokenCount || 0);
+  return text;
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const diffColor = d => ({ "Advanced":"#ef4444","Intermediate":"#f59e0b","Beginner":"#16a34a" }[d]||"#6b7280");
+const topicColor = t => { const h=[...t].reduce((a,c)=>a+c.charCodeAt(0),0); return ["#7c6af7","#0ea5e9","#ec4899","#f59e0b","#10b981","#06b6d4","#ef4444","#6366f1"][h%8]; };
+
+const GEN_SYSTEM = `You are a veterinary medicine content generator. Generate high-quality clinical training content grounded in Ettinger's Textbook of Veterinary Internal Medicine 9th Edition and peer-reviewed sources.
+Always respond with valid JSON only — no preamble, no markdown fences.`;
+
+
+// ── FEED POST COMPONENT (extracted to avoid useState in map) ──────────────
+function FeedPostCard({post, T, font, fontSans, topicColor, addReaction, addComment, user}) {
+  const [localComment, setLocalComment] = useState("");
+  return (
+    <div style={{ background:T.surface,border:"1px solid "+T.border,borderRadius:12,padding:0,overflow:"hidden" }}>
+      {/* Post header */}
+      <div style={{ padding:"16px 20px 12px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid "+T.border }}>
+        <div style={{ width:38,height:38,borderRadius:"50%",background:post.authorColor,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:"white",flexShrink:0 }}>{post.authorAvatar}</div>
+        <div>
+          <div style={{ fontWeight:600,color:T.text,fontSize:14 }}>{post.authorName}</div>
+          <div style={{ color:T.muted,fontSize:12 }}>{post.authorClinic} · {new Date(post.date).toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"})}</div>
+        </div>
+        <div style={{ marginLeft:"auto",display:"flex",gap:6,flexWrap:"wrap" }}>
+          {post.tags?.slice(0,3).map(t=><span key={t} style={{ background:topicColor(t)+"18",color:topicColor(t),border:"1px solid "+topicColor(t)+"30",borderRadius:5,padding:"2px 8px",fontSize:11,fontWeight:600 }}>{t}</span>)}
+        </div>
+      </div>
+      {/* Post body */}
+      <div style={{ padding:"18px 20px" }}>
+        <h3 style={{ fontFamily:font,fontSize:19,fontWeight:600,color:T.text,marginBottom:14 }}>{post.title}</h3>
+        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14 }}>
+          {[{l:"Chief Complaint",v:post.chiefComplaint,i:"🔍"},{l:"Clinical Findings",v:post.clinicalFindings,i:"🩺"},{l:"Diagnostics",v:post.diagnosticsSummary,i:"🧪"},{l:"Management",v:post.management,i:"💊"}].filter(x=>x.v).map(s=>(
+            <div key={s.l} style={{ background:T.surface2,borderRadius:9,padding:"12px 14px" }}>
+              <div style={{ fontSize:11,fontWeight:600,color:T.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:"0.05em" }}>{s.i} {s.l}</div>
+              <div style={{ fontSize:13,color:T.text2,lineHeight:1.5 }}>{s.v}</div>
+            </div>
+          ))}
+        </div>
+        {post.outcome&&<div style={{ background:T.successLight,border:"1px solid "+T.success+"25",borderRadius:9,padding:"10px 14px",marginBottom:12 }}>
+          <div style={{ fontSize:11,fontWeight:600,color:T.success,marginBottom:3,textTransform:"uppercase",letterSpacing:"0.05em" }}>✅ Outcome</div>
+          <div style={{ fontSize:13,color:T.text2 }}>{post.outcome}</div>
+        </div>}
+        {post.learningPoint&&<div style={{ background:"#fefce8",border:"1px solid #fde047",borderRadius:9,padding:"10px 14px" }}>
+          <div style={{ fontSize:11,fontWeight:600,color:"#854d0e",marginBottom:3,textTransform:"uppercase",letterSpacing:"0.05em" }}>💡 Learning Point</div>
+          <div style={{ fontSize:14,color:"#78350f",lineHeight:1.6,fontStyle:"italic",fontFamily:font }}>{post.learningPoint}</div>
+        </div>}
+      </div>
+      {/* Reactions */}
+      <div style={{ padding:"10px 20px",borderTop:"1px solid "+T.border,display:"flex",gap:8,alignItems:"center" }}>
+        {Object.entries(post.reactions).map(([emoji,count])=>(
+          <button key={emoji} onClick={()=>addReaction(post.id,emoji)} style={{ background:T.surface2,border:"1px solid "+T.border,borderRadius:20,padding:"5px 12px",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",gap:5,transition:"all 0.15s",fontFamily:fontSans }}>
+            {emoji} <span style={{ fontWeight:600,color:T.text2 }}>{count}</span>
+          </button>
+        ))}
+        <span style={{ marginLeft:"auto",color:T.muted,fontSize:12 }}>{post.comments.length} comment{post.comments.length!==1?"s":""}</span>
+      </div>
+      {/* Comments */}
+      {post.comments.length>0&&(
+        <div style={{ padding:"0 20px",borderTop:"1px solid "+T.border }}>
+          {post.comments.map((c,i)=>(
+            <div key={c.id} style={{ display:"flex",gap:10,padding:"12px 0",borderBottom:i<post.comments.length-1?"1px solid "+T.border:"none" }}>
+              <div style={{ width:28,height:28,borderRadius:"50%",background:c.color||T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"white",flexShrink:0 }}>{c.avatar}</div>
+              <div>
+                <div style={{ fontSize:12,fontWeight:600,color:T.text,marginBottom:2 }}>{c.authorName}</div>
+                <div style={{ fontSize:13,color:T.text2,lineHeight:1.5 }}>{c.text}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {/* Comment input */}
+      <div style={{ padding:"12px 20px",borderTop:"1px solid "+T.border,display:"flex",gap:8 }}>
+        <div style={{ width:28,height:28,borderRadius:"50%",background:user?.color||T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"white",flexShrink:0 }}>{user?.avatar}</div>
+        <input value={localComment} onChange={e=>setLocalComment(e.target.value)}
+          onKeyDown={e=>{ if(e.key==="Enter"&&localComment.trim()){ addComment(post.id,localComment); setLocalComment(""); }}}
+          placeholder="Add a comment..."
+          style={{ flex:1,background:T.surface2,border:"1px solid "+T.border,borderRadius:20,padding:"6px 14px",fontSize:13,color:T.text,fontFamily:fontSans }}/>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+function VetMentor() {
+  const [screen, setScreen] = useState("login");
+  const [user, setUser] = useState(null);
+  const [loginForm, setLoginForm] = useState({ email:"", password:"", error:"" });
+  const [selectedTopics, setSelectedTopics] = useState([]);
+  const [cases, setCases] = useState(SEED_CASES);
+  const [questions, setQuestions] = useState(SEED_QUESTIONS);
+  const [feedPosts, setFeedPosts] = useState(SEED_FEED_POSTS);
+  const [activeCaseId, setActiveCaseId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [quizTopics, setQuizTopics] = useState([]);
+  const [quizQs, setQuizQs] = useState([]);
+  const [quizIdx, setQuizIdx] = useState(0);
+  const [quizAnswers, setQuizAnswers] = useState({});
+  const [quizShowExp, setQuizShowExp] = useState(false);
+  const [quizDone, setQuizDone] = useState(false);
+  const [userData, setUserData] = useState({});
+  const [adminData, setAdminData] = useState({});
+  const [caseFilter, setCaseFilter] = useState({ topic:"All", diff:"All", sp:"All" });
+  const [caseView, setCaseView] = useState("cases");
+  const [adminTab, setAdminTab] = useState("overview");
+  const [genTopic, setGenTopic] = useState("");
+  const [genSpecies, setGenSpecies] = useState("Dog");
+  const [genDiff, setGenDiff] = useState("Intermediate");
+  const [genType, setGenType] = useState("case");
+  const [genLoading, setGenLoading] = useState(false);
+  const [genPreview, setGenPreview] = useState(null);
+  const [genError, setGenError] = useState("");
+  const [newPostForm, setNewPostForm] = useState({ title:"", species:"", breed:"", chiefComplaint:"", clinicalFindings:"", diagnosticsSummary:"", management:"", outcome:"", learningPoint:"", tags:"" });
+  const [postingCase, setPostingCase] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [, forceUpdate] = useState(0);
+  const msgEnd = useRef(null);
+
+  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
+
+  useEffect(()=>{ msgEnd.current?.scrollIntoView({ behavior:"smooth" }); },[messages]);
+
+  useEffect(()=>{
+    (async()=>{
+      const savedCases = store.get("library_cases");
+      const savedQs = store.get("library_questions");
+      const savedFeed = store.get("feed_posts");
+      if(savedCases) setCases(savedCases);
+      if(savedQs) setQuestions(savedQs);
+      if(savedFeed) setFeedPosts(savedFeed);
+    })();
+  },[]);
+
+  useEffect(()=>{
+    if(screen==="admin") {
+      const all={};
+      for(const u of USERS_DB.filter(x=>x.role==="vet")){
+        const d=store.get("progress_"+u.id);
+        all[u.id]={ user:u, progress:d||{ casesCompleted:[], quizzesDone:[], topicScores:{}, sessions:[], topics:[] } };
+      }
+      setAdminData(all);
+    }
+  },[screen]);
+
+  const saveProgress = (update) => {
+    const key=`progress_${user.id}`;
+    const cur=store.get(key)||{ casesCompleted:[], quizzesDone:[], topicScores:{}, sessions:[], topics:selectedTopics };
+    const merged={...cur,...update};
+    store.set(key,merged);
+    setUserData(merged);
+    return merged;
+  };
+
+  const loadUserData = (uid) => {
+    const d=store.get(`progress_${uid}`)||{ casesCompleted:[], quizzesDone:[], topicScores:{}, sessions:[], topics:[] };
+    setUserData(d);
+    return d;
+  };
+
+  const handleLogin = () => {
+    const u=USERS_DB.find(x=>x.email===loginForm.email&&x.password===loginForm.password);
+    if(!u){ setLoginForm(p=>({...p,error:"Invalid email or password"})); return; }
+    setUser(u);
+    const d=await loadUserData(u.id);
+    if(!getGeminiKey()) setShowApiKeyModal(true);
+    if(u.role==="admin") setScreen("admin");
+    else if(d.topics?.length>0){ setSelectedTopics(d.topics); setScreen("dashboard"); }
+    else setScreen("onboarding");
+  };
+
+  const handleOnboardingDone = () => {
+    if(!selectedTopics.length) return;
+    await saveProgress({ topics:selectedTopics });
+    setScreen("dashboard");
+  };
+
+  // CASE CHAT
+  const startCase = async(c) => {
+    setActiveCaseId(c.id); setMessages([]); setScreen("case-chat"); setChatLoading(true);
+    const sys=`You are a senior veterinary clinician teaching via Socratic method, grounded in Ettinger's Textbook of Veterinary Internal Medicine (9th Ed).
+CASE: Signalment: ${c.signalment} | Complaint: ${c.presenting_complaint} | History: ${c.history} | Exam: ${c.physical_exam} | Diagnostics: ${JSON.stringify(c.diagnostics)} | Reference: ${c.reference} | Diagnosis: ${c.diagnosis} (DO NOT REVEAL until learner earns it)
+RULES: Ask questions, probe reasoning, guide via case findings. Reference Ettinger when teaching. 3-5 sentences max + end with probing question. Warm but rigorous tone.`;
+    try {
+      const text = await callGemini(sys, "New learner. Welcome briefly, present signalment + chief complaint only, ask initial thoughts and what history questions they'd want.", user.id);
+      setMessages([{role:"assistant",content:text||"Let's begin."}]);
+    } catch(e) {
+      if(e.message==="NO_KEY"){setShowApiKeyModal(true);setMessages([{role:"assistant",content:"Please set your Gemini API key first (click the 🔑 icon in the top bar)."}]);}
+      else if(e.message==="RATE_LIMITED") setMessages([{role:"assistant",content:"You've reached your daily limit of "+DAILY_LIMIT+" AI calls. Resets tomorrow. You can still browse cases and take quizzes!"}]);
+      else setMessages([{role:"assistant",content:"Welcome — let's work through this case together. What are your initial thoughts?"}]);
+    }
+    forceUpdate(n=>n+1);
+    setChatLoading(false);
+  };
+
+  const sendChat = async() => {
+    if(!chatInput.trim()||chatLoading) return;
+    const c=cases.find(x=>x.id===activeCaseId);
+    const sys=`You are a senior veterinary clinician teaching via Socratic method, grounded in Ettinger's Textbook of Veterinary Internal Medicine (9th Ed). CASE: ${c.signalment} | ${c.presenting_complaint} | ${c.physical_exam} | Diagnostics: ${JSON.stringify(c.diagnostics)} | Reference: ${c.reference} | Diagnosis: ${c.diagnosis} (reveal only after learner demonstrates sound reasoning). Keep responses 3-5 sentences + probing question.`;
+    const newMsgs=[...messages,{role:"user",content:chatInput}];
+    setMessages(newMsgs); setChatInput(""); setChatLoading(true);
+    try {
+      const text = await callGemini(sys, newMsgs.map(m=>({role:m.role,content:m.content})), user.id);
+      setMessages([...newMsgs,{role:"assistant",content:text||"Continue."}]);
+    } catch(e) {
+      if(e.message==="RATE_LIMITED") setMessages([...newMsgs,{role:"assistant",content:"Daily AI limit reached ("+DAILY_LIMIT+" calls). Resets tomorrow. Great work so far!"}]);
+      else if(e.message==="NO_KEY") setMessages([...newMsgs,{role:"assistant",content:"Please set your Gemini API key first."}]);
+      else setMessages([...newMsgs,{role:"assistant",content:"Please continue — what is your reasoning?"}]);
+    }
+    forceUpdate(n=>n+1);
+    setChatLoading(false);
+  };
+
+  const completeCase = () => {
+    const cur=userData.casesCompleted||[];
+    if(!cur.includes(activeCaseId)){
+      await saveProgress({ casesCompleted:[...cur,activeCaseId], sessions:[...(userData.sessions||[]),{ type:"case",id:activeCaseId,date:new Date().toISOString(),topic:cases.find(x=>x.id===activeCaseId)?.topic }] });
+    }
+    showToast("Case marked complete! 🎉");
+    setScreen("cases"); setActiveCaseId(null); setMessages([]);
+  };
+
+  // QUIZ
+  const startQuiz = () => {
+    const pool=questions.filter(q=>quizTopics.length===0||quizTopics.includes(q.topic));
+    const shuffled=[...pool].sort(()=>Math.random()-0.5).slice(0,Math.min(10,pool.length));
+    setQuizQs(shuffled); setQuizIdx(0); setQuizAnswers({}); setQuizDone(false); setQuizShowExp(false);
+    setScreen("quiz-session");
+  };
+
+  const handleQuizAnswer=(idx)=>{ setQuizAnswers(p=>({...p,[quizQs[quizIdx].id]:idx})); setQuizShowExp(true); };
+
+  const nextQ=async()=>{
+    if(quizIdx+1>=quizQs.length){
+      const score=quizQs.filter(q=>quizAnswers[q.id]===q.correct).length;
+      const topicScores={...(userData.topicScores||{})};
+      quizQs.forEach(q=>{ if(!topicScores[q.topic])topicScores[q.topic]={correct:0,total:0}; topicScores[q.topic].total++; if(quizAnswers[q.id]===q.correct)topicScores[q.topic].correct++; });
+      await saveProgress({ topicScores, quizzesDone:[...(userData.quizzesDone||[]),{date:new Date().toISOString(),score,total:quizQs.length}], sessions:[...(userData.sessions||[]),{type:"quiz",date:new Date().toISOString(),score,total:quizQs.length}] });
+      setQuizDone(true);
+    } else { setQuizIdx(i=>i+1); setQuizShowExp(false); }
+  };
+
+  // AI CONTENT GENERATOR
+  const generateContent = async() => {
+    if(!genTopic.trim()){ setGenError("Please enter a topic"); return; }
+    setGenLoading(true); setGenPreview(null); setGenError("");
+    const prompt = genType==="case"
+      ? `Generate a veterinary clinical case for training purposes. Topic: "${genTopic}", Species: ${genSpecies}, Difficulty: ${genDiff}.
+Return ONLY this JSON (no extra text):
+{
+  "id": "gen_${Date.now()}",
+  "topic": "${genTopic}",
+  "species": "${genSpecies}",
+  "breed": "specific breed",
+  "difficulty": "${genDiff}",
+  "title": "descriptive clinical title",
+  "signalment": "age sex breed weight",
+  "presenting_complaint": "chief complaint",
+  "history": "relevant history",
+  "physical_exam": "key findings with vitals",
+  "diagnostics": {"CBC": "...", "Chemistry": "...", "Urinalysis": "...", "Imaging": "..."},
+  "reference": "Ettinger 9th Ed, Ch. X — Topic Name",
+  "diagnosis": "final diagnosis"
+}`
+      : `Generate 3 multiple-choice clinical assessment questions for veterinary training. Topic: "${genTopic}", Species: ${genSpecies}, Difficulty: ${genDiff}.
+Return ONLY this JSON array (no extra text):
+[
+  {
+    "id": "gen_${Date.now()}_1",
+    "topic": "${genTopic}",
+    "difficulty": "${genDiff}",
+    "species": "${genSpecies}",
+    "question": "clinical question",
+    "options": ["A", "B", "C", "D"],
+    "correct": 0,
+    "reference": "Ettinger 9th Ed, Ch. X",
+    "explanation": "detailed explanation of correct answer",
+    "wrong": {"0": "why wrong", "1": "why wrong", "2": "why wrong"}
+  }
+]`;
+    try {
+      const text = await callGemini(GEN_SYSTEM, prompt, user.id);
+      const clean=text.replace(/\`\`\`json|\`\`\`/g,"").trim();
+      const parsed=JSON.parse(clean);
+      setGenPreview(parsed);
+    } catch(e) {
+      if(e.message==="NO_KEY"){setShowApiKeyModal(true);setGenError("Please set your Gemini API key first.");}
+      else if(e.message==="RATE_LIMITED") setGenError("Daily AI limit reached ("+DAILY_LIMIT+" calls). Resets tomorrow.");
+      else setGenError("Generation failed — please try again with a more specific topic.");
+    }
+    forceUpdate(n=>n+1);
+    setGenLoading(false);
+  };
+
+  const publishGenerated = () => {
+    if(!genPreview) return;
+    if(genType==="case"){
+      const newCases=[...cases, genPreview];
+      setCases(newCases);
+      store.set("library_cases", newCases);
+      showToast("Case published to library! 🎉");
+    } else {
+      const arr=Array.isArray(genPreview)?genPreview:[genPreview];
+      const newQs=[...questions,...arr];
+      setQuestions(newQs);
+      store.set("library_questions", newQs);
+      showToast(`${arr.length} questions published! 🎉`);
+    }
+    setGenPreview(null); setGenTopic("");
+  };
+
+  // DELETE CONTENT
+  const deleteCase = (id) => {
+    const updated=cases.filter(c=>c.id!==id);
+    setCases(updated);
+    store.set("library_cases", updated);
+    showToast("Case deleted");
+  };
+  const deleteQuestion = (id) => {
+    const updated=questions.filter(q=>q.id!==id);
+    setQuestions(updated);
+    store.set("library_questions", updated);
+    showToast("Question deleted");
+  };
+
+  // FEED
+  const submitPost = () => {
+    if(!newPostForm.title||!newPostForm.chiefComplaint) return;
+    const post = {
+      id: `fp_${Date.now()}`,
+      authorId: user.id, authorName: user.name, authorClinic: user.clinic,
+      authorColor: user.color, authorAvatar: user.avatar,
+      date: new Date().toISOString(),
+      title: newPostForm.title, species: newPostForm.species, breed: newPostForm.breed,
+      chiefComplaint: newPostForm.chiefComplaint, clinicalFindings: newPostForm.clinicalFindings,
+      diagnosticsSummary: newPostForm.diagnosticsSummary, management: newPostForm.management,
+      outcome: newPostForm.outcome, learningPoint: newPostForm.learningPoint,
+      tags: newPostForm.tags.split(",").map(t=>t.trim()).filter(Boolean),
+      reactions:{"❤️":0,"🧠":0,"👏":0}, comments:[]
+    };
+    const updated=[post,...feedPosts];
+    setFeedPosts(updated);
+    store.set("feed_posts",updated);
+    setNewPostForm({ title:"",species:"",breed:"",chiefComplaint:"",clinicalFindings:"",diagnosticsSummary:"",management:"",outcome:"",learningPoint:"",tags:"" });
+    setPostingCase(false);
+    showToast("Case published to the feed! 🎉");
+  };
+
+  const addReaction = (postId, emoji) => {
+    const updated=feedPosts.map(p=>p.id===postId?{...p,reactions:{...p.reactions,[emoji]:(p.reactions[emoji]||0)+1}}:p);
+    setFeedPosts(updated);
+    store.set("feed_posts",updated);
+  };
+
+  const addComment = (postId, text) => {
+    if(!text.trim()) return;
+    const newComment={ id:`c_${Date.now()}`, authorId:user.id, authorName:user.name, avatar:user.avatar, color:user.color, text, date:new Date().toISOString() };
+    const updated=feedPosts.map(p=>p.id===postId?{...p,comments:[...p.comments,newComment]}:p);
+    setFeedPosts(updated);
+    store.set("feed_posts",updated);
+  };
+
+  // ─── STYLES ─────────────────────────────────────────────────────────────────
+  const T = {
+    bg:"#f7f6f3",        // warm off-white (Notion-like)
+    surface:"#ffffff",   // card white
+    surface2:"#f1efe9",  // subtle warm tint
+    border:"#e5e2da",    // warm border
+    border2:"#d1cec5",   // slightly darker border
+    text:"#1a1916",      // rich near-black
+    text2:"#4a4742",     // body text
+    muted:"#9b9690",     // muted text
+    accent:"#6366f1",    // indigo accent
+    accentLight:"#eef2ff",
+    success:"#16a34a", successLight:"#f0fdf4",
+    warn:"#d97706", warnLight:"#fffbeb",
+    danger:"#dc2626", dangerLight:"#fef2f2",
+  };
+
+  const font = `'Lora', 'Georgia', serif`;
+  const fontSans = `'DM Sans', system-ui, sans-serif`;
+
+  const GLOBAL_CSS = `
+    @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: ${T.bg}; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: ${T.bg}; }
+    ::-webkit-scrollbar-thumb { background: ${T.border2}; border-radius: 10px; }
+    input, button, textarea, select { font-family: ${fontSans}; }
+    input:focus, textarea:focus { outline: none !important; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse3 { 0%,80%,100%{opacity:.25;transform:scale(.7)}40%{opacity:1;transform:scale(1)} }
+    @keyframes toastIn { from{transform:translateX(120%)} to{transform:translateX(0)} }
+  `;
+
+  const Card = ({children, style={}, onClick}) => (
+    <div onClick={onClick} style={{ background:T.surface, border:`1px solid ${T.border}`, borderRadius:12, ...style, cursor:onClick?"pointer":"default", transition:"box-shadow 0.2s, border-color 0.2s", ...(onClick?{ ":hover":{ boxShadow:"0 4px 20px rgba(0,0,0,0.07)" } }:{}) }}
+      onMouseEnter={onClick?e=>{e.currentTarget.style.boxShadow="0 4px 20px rgba(0,0,0,0.08)";e.currentTarget.style.borderColor=T.border2}:undefined}
+      onMouseLeave={onClick?e=>{e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=T.border}:undefined}>
+      {children}
+    </div>
+  );
+
+  const Tag = ({label, color, bg}) => (
+    <span style={{ background:bg||color+"18", color, border:`1px solid ${color}30`, borderRadius:5, padding:"2px 8px", fontSize:11, fontWeight:600, fontFamily:fontSans, letterSpacing:"0.02em", whiteSpace:"nowrap" }}>{label}</span>
+  );
+
+  const Btn = ({children,onClick,variant="primary",style={},disabled=false}) => {
+    const base = { padding:"8px 18px", borderRadius:8, border:"none", cursor:disabled?"not-allowed":"pointer", fontSize:13, fontWeight:500, fontFamily:fontSans, transition:"all 0.15s", display:"inline-flex", alignItems:"center", gap:6, opacity:disabled?0.5:1 };
+    const variants = {
+      primary:{ background:T.accent, color:"white", ":hover":"filter:brightness(1.08)" },
+      secondary:{ background:T.surface2, color:T.text2, border:`1px solid ${T.border}` },
+      ghost:{ background:"transparent", color:T.muted, border:`1px solid ${T.border}` },
+      danger:{ background:T.dangerLight, color:T.danger, border:`1px solid ${T.danger}30` },
+      success:{ background:T.successLight, color:T.success, border:`1px solid ${T.success}30` },
+    };
+    return <button disabled={disabled} onClick={onClick} style={{...base,...variants[variant],...style}}
+      onMouseEnter={e=>{ if(!disabled) e.currentTarget.style.filter="brightness(0.95)"; }}
+      onMouseLeave={e=>{ e.currentTarget.style.filter=""; }}>{children}</button>;
+  };
+
+  const Input = ({value,onChange,placeholder,style={},type="text",multiline=false}) => {
+    const s = { width:"100%", background:T.surface, border:`1px solid ${T.border}`, borderRadius:8, padding:"9px 12px", fontSize:14, color:T.text, fontFamily:fontSans, ...style };
+    return multiline
+      ? <textarea value={value} onChange={onChange} placeholder={placeholder} rows={3} style={{...s,resize:"vertical",lineHeight:1.5}} onFocus={e=>e.currentTarget.style.borderColor=T.accent} onBlur={e=>e.currentTarget.style.borderColor=T.border}/>
+      : <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={s} onFocus={e=>e.currentTarget.style.borderColor=T.accent} onBlur={e=>e.currentTarget.style.borderColor=T.border}/>;
+  };
+
+  const Divider = () => <div style={{ height:1, background:T.border, margin:"16px 0" }}/>;
+
+  // USAGE BADGE
+  const UsageBadge = () => {
+    const remaining = user ? getRemainingCalls(user.id) : 0;
+    const pct = remaining / DAILY_LIMIT;
+    const color = pct > 0.5 ? T.success : pct > 0.2 ? T.warn : T.danger;
+    return <span style={{background:color+"14",color,border:"1px solid "+color+"30",borderRadius:5,padding:"2px 8px",fontSize:11,fontWeight:600,fontFamily:fontSans}}>{remaining}/{DAILY_LIMIT} AI calls left</span>;
+  };
+
+  // API KEY MODAL
+  const ApiKeyModal = () => showApiKeyModal ? (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}} onClick={()=>setShowApiKeyModal(false)}>
+      <div onClick={e=>e.stopPropagation()} style={{background:T.surface,border:"1px solid "+T.border,borderRadius:16,padding:32,maxWidth:480,width:"90%",boxShadow:"0 20px 60px rgba(0,0,0,0.15)",animation:"fadeUp 0.3s ease"}}>
+        <h2 style={{fontFamily:font,fontSize:22,color:T.text,marginBottom:8}}>Gemini API Key</h2>
+        <p style={{color:T.text2,fontSize:13,marginBottom:6,lineHeight:1.6}}>This app uses Google's free Gemini API. Get your key from:</p>
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style={{color:T.accent,fontSize:13,fontWeight:600,display:"block",marginBottom:16}}>aistudio.google.com/apikey →</a>
+        <p style={{color:T.muted,fontSize:12,marginBottom:16,background:T.surface2,padding:"10px 12px",borderRadius:8,border:"1px solid "+T.border}}>Your key is stored only in your browser's localStorage. Never sent anywhere except Google's API.</p>
+        <Input value={apiKeyInput} onChange={e=>setApiKeyInput(e.target.value)} placeholder="AIzaSy... (paste your Gemini API key)" type="password"/>
+        <div style={{display:"flex",gap:8,marginTop:16,justifyContent:"flex-end"}}>
+          <Btn variant="secondary" onClick={()=>setShowApiKeyModal(false)}>Cancel</Btn>
+          <Btn onClick={()=>{setGeminiKey(apiKeyInput.trim());setShowApiKeyModal(false);showToast("API key saved!");}}>Save key</Btn>
+        </div>
+        {getGeminiKey() && <div style={{marginTop:12,padding:"8px 12px",background:T.successLight,borderRadius:8,border:"1px solid "+T.success+"25",fontSize:12,color:T.success}}>Key set (ends in ...{getGeminiKey().slice(-4)})</div>}
+      </div>
+    </div>
+  ) : null;
+
+  // NAV
+  const NavBar = () => {
+    const navItems = user?.role==="vet"
+      ? [["dashboard","Dashboard"],["cases","Library"],["feed","My Cases"],["performance","Progress"]]
+      : [["admin","Admin"],["cases","Content Library"]];
+    return (
+      <div style={{ background:T.surface, borderBottom:`1px solid ${T.border}`, padding:"0 28px", display:"flex", alignItems:"center", justifyContent:"space-between", height:52, position:"sticky", top:0, zIndex:100 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ width:30,height:30,borderRadius:8,background:`linear-gradient(135deg,${T.accent},#8b5cf6)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14 }}>🐾</div>
+          <span style={{ fontFamily:font, fontSize:17, fontWeight:600, color:T.text }}>VetMentor</span>
+          <span style={{ color:T.muted, fontSize:12, fontFamily:fontSans }}>· Supertails</span>
+        </div>
+        <div style={{ display:"flex", gap:2 }}>
+          {navItems.map(([s,l])=>(
+            <button key={s} onClick={()=>setScreen(s)} style={{ padding:"6px 14px",borderRadius:7,border:"none",cursor:"pointer",fontSize:13,fontFamily:fontSans,fontWeight:500,
+              background:screen===s?T.accentLight:"transparent",color:screen===s?T.accent:T.muted, transition:"all 0.15s" }}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+          {user && <UsageBadge/>}
+          <button onClick={()=>{setApiKeyInput(getGeminiKey());setShowApiKeyModal(true);}} title="API Key Settings" style={{ background:T.surface2,border:"1px solid "+T.border,borderRadius:7,padding:"4px 10px",cursor:"pointer",fontSize:14 }}>🔑</button>
+          <div style={{ width:30,height:30,borderRadius:"50%",background:user?.color||T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"white" }}>{user?.avatar}</div>
+          <div>
+            <div style={{ fontSize:13,fontWeight:600,fontFamily:fontSans,color:T.text,lineHeight:1.2 }}>{user?.name?.split(" ").slice(0,2).join(" ")}</div>
+            <div style={{ fontSize:11,color:T.muted,fontFamily:fontSans }}>{user?.clinic}</div>
+          </div>
+          <button onClick={()=>{setUser(null);setScreen("login");setSelectedTopics([]);setUserData({});}} style={{ marginLeft:4,background:"transparent",border:`1px solid ${T.border}`,color:T.muted,borderRadius:7,padding:"4px 10px",cursor:"pointer",fontSize:12,fontFamily:fontSans }}>
+            Sign out
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const PageWrap = ({children}) => (
+    <div style={{ background:T.bg, minHeight:"100vh", fontFamily:fontSans }}>
+      <style>{GLOBAL_CSS}</style>
+      <NavBar/>
+      <ApiKeyModal/>
+      {toast&&<div style={{ position:"fixed",bottom:24,right:24,background:toast.type==="success"?"#1a1916":"#dc2626",color:"white",padding:"12px 20px",borderRadius:10,fontSize:13,fontWeight:500,zIndex:9999,animation:"toastIn 0.3s ease",boxShadow:"0 8px 30px rgba(0,0,0,0.2)",fontFamily:fontSans }}>{toast.msg}</div>}
+      <div style={{ maxWidth:1080, margin:"0 auto", padding:"32px 24px" }}>{children}</div>
+    </div>
+  );
+
+  // ── LOGIN ──────────────────────────────────────────────────────────────────
+  if(screen==="login") return (
+    <div style={{ background:T.bg, minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:fontSans }}>
+      <style>{GLOBAL_CSS}</style>
+      <ApiKeyModal/>
+      {/* Subtle pattern */}
+      <div style={{ position:"fixed",inset:0,backgroundImage:"radial-gradient(circle, #e5e2da 1px, transparent 1px)",backgroundSize:"28px 28px",opacity:0.6,pointerEvents:"none" }}/>
+      <div style={{ width:420, background:T.surface, border:`1px solid ${T.border}`, borderRadius:16, padding:"40px 36px", position:"relative", boxShadow:"0 8px 40px rgba(0,0,0,0.06)", animation:"fadeUp 0.4s ease" }}>
+        <div style={{ textAlign:"center", marginBottom:32 }}>
+          <div style={{ width:52,height:52,borderRadius:14,background:`linear-gradient(135deg,${T.accent},#8b5cf6)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,margin:"0 auto 14px",boxShadow:"0 4px 16px rgba(99,102,241,0.25)" }}>🐾</div>
+          <h1 style={{ fontFamily:font, fontSize:26, fontWeight:600, color:T.text, marginBottom:4 }}>VetMentor</h1>
+          <p style={{ color:T.muted, fontSize:13, fontStyle:"italic" }}>Clinical Training Platform · Supertails</p>
+        </div>
+        <div style={{ marginBottom:14 }}>
+          <label style={{ display:"block",fontSize:12,fontWeight:500,color:T.text2,marginBottom:5,textTransform:"uppercase",letterSpacing:"0.06em" }}>Email address</label>
+          <Input value={loginForm.email} onChange={e=>setLoginForm(p=>({...p,email:e.target.value,error:""}))} placeholder="doctor@supertails.com" />
+        </div>
+        <div style={{ marginBottom:6 }}>
+          <label style={{ display:"block",fontSize:12,fontWeight:500,color:T.text2,marginBottom:5,textTransform:"uppercase",letterSpacing:"0.06em" }}>Password</label>
+          <Input type="password" value={loginForm.password} onChange={e=>setLoginForm(p=>({...p,password:e.target.value,error:""}))} placeholder="••••••••" />
+        </div>
+        {loginForm.error&&<div style={{ color:T.danger,fontSize:13,marginBottom:8,marginTop:4 }}>⚠ {loginForm.error}</div>}
+        <Btn onClick={handleLogin} style={{ width:"100%",justifyContent:"center",padding:"11px",fontSize:14,marginTop:16,borderRadius:9 }}>Sign in →</Btn>
+        <div style={{ marginTop:22,padding:14,background:T.surface2,borderRadius:10,border:`1px solid ${T.border}` }}>
+          <div style={{ fontSize:11,fontWeight:600,color:T.muted,marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em" }}>Demo Accounts</div>
+          {[["priya@supertails.com","vet123","Vet — Dr. Priya"],["navpreet@supertails.com","admin123","Admin — Navpreet"]].map(([e,p,l])=>(
+            <div key={e} onClick={()=>setLoginForm({email:e,password:p,error:""})} style={{ cursor:"pointer",padding:"6px 0",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+              <span style={{ color:T.accent,fontSize:12,fontWeight:500 }}>{e}</span>
+              <span style={{ color:T.muted,fontSize:11 }}>{l}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop:16,padding:12,background:"#fefce8",borderRadius:10,border:"1px solid #fde047",fontSize:12,color:"#854d0e",lineHeight:1.5 }}>
+          <strong>Setup:</strong> After login, click the 🔑 icon to set your free Gemini API key. Get one at <a href="https://aistudio.google.com/apikey" target="_blank" style={{color:"#854d0e",fontWeight:600}}>aistudio.google.com/apikey</a>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── ONBOARDING ─────────────────────────────────────────────────────────────
+  if(screen==="onboarding") return (
+    <div style={{ background:T.bg,minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:fontSans,padding:24 }}>
+      <style>{GLOBAL_CSS}</style>
+      <div style={{ maxWidth:680,width:"100%",animation:"fadeUp 0.4s ease" }}>
+        <div style={{ textAlign:"center",marginBottom:32 }}>
+          <div style={{ fontSize:11,fontWeight:600,color:T.muted,textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:8 }}>Welcome, {user?.name}</div>
+          <h1 style={{ fontFamily:font,fontSize:34,fontWeight:600,color:T.text,marginBottom:10 }}>What would you like to study?</h1>
+          <p style={{ color:T.text2,fontSize:15,maxWidth:440,margin:"0 auto" }}>Select the clinical topics you want to focus on. Your cases and assessments will be personalised accordingly.</p>
+        </div>
+        <Card style={{ padding:24,marginBottom:20 }}>
+          <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8 }}>
+            {ALL_TOPICS.map(t=>{
+              const sel=selectedTopics.includes(t), c=topicColor(t);
+              return <div key={t} onClick={()=>setSelectedTopics(p=>sel?p.filter(x=>x!==t):[...p,t])}
+                style={{ background:sel?c+"12":T.surface2,border:`1.5px solid ${sel?c:T.border}`,borderRadius:9,padding:"10px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,transition:"all 0.15s" }}>
+                <span style={{ fontSize:16 }}>{TOPIC_ICONS[t]}</span>
+                <span style={{ fontSize:13,fontWeight:sel?600:400,color:sel?c:T.text2,flex:1 }}>{t}</span>
+                {sel&&<span style={{ color:c,fontSize:14 }}>✓</span>}
+              </div>;
+            })}
+          </div>
+        </Card>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+          <span style={{ color:T.muted,fontSize:13 }}>{selectedTopics.length} of {ALL_TOPICS.length} topics selected</span>
+          <div style={{ display:"flex",gap:8 }}>
+            <Btn variant="secondary" onClick={()=>setSelectedTopics(ALL_TOPICS)}>Select all</Btn>
+            <Btn onClick={handleOnboardingDone} disabled={!selectedTopics.length}>Continue →</Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── DASHBOARD ──────────────────────────────────────────────────────────────
+  if(screen==="dashboard") {
+    const completed=userData.casesCompleted?.length||0;
+    const quizCount=userData.quizzesDone?.length||0;
+    const avg=quizCount?Math.round(userData.quizzesDone.reduce((a,q)=>a+q.score/q.total*100,0)/quizCount):0;
+    const myCases=cases.filter(c=>selectedTopics.includes(c.topic));
+    const recent=(userData.sessions||[]).slice(-4).reverse();
+    return (
+      <PageWrap>
+        <div style={{ marginBottom:28,animation:"fadeUp 0.4s ease" }}>
+          <h1 style={{ fontFamily:font,fontSize:30,fontWeight:600,color:T.text,marginBottom:4 }}>Good day, {user?.name?.split(" ")[1]||user?.name?.split(" ")[0]} 👋</h1>
+          <p style={{ color:T.muted,fontSize:14 }}>Here's your clinical training overview</p>
+        </div>
+        {!getGeminiKey() && (
+          <div onClick={()=>{setApiKeyInput("");setShowApiKeyModal(true);}} style={{ cursor:"pointer",background:"#fefce8",border:"1px solid #fde047",borderRadius:10,padding:"14px 18px",marginBottom:20,display:"flex",alignItems:"center",gap:10 }}>
+            <span style={{ fontSize:20 }}>🔑</span>
+            <div>
+              <div style={{ fontWeight:600,fontSize:14,color:"#854d0e" }}>Set up Gemini API key</div>
+              <div style={{ fontSize:12,color:"#a16207" }}>Click here to add your free API key for AI-powered case discussions and content generation.</div>
+            </div>
+          </div>
+        )}
+        <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:28 }}>
+          {[{l:"Cases Available",v:myCases.length,c:T.accent,i:"🔬"},{l:"Cases Completed",v:completed,c:"#16a34a",i:"✅"},{l:"Quizzes Taken",v:quizCount,c:"#8b5cf6",i:"📋"},{l:"Avg Score",v:avg?`${avg}%`:"—",c:"#d97706",i:"🎯"}].map(s=>(
+            <Card key={s.l} style={{ padding:"20px 20px" }}>
+              <div style={{ fontSize:22,marginBottom:10 }}>{s.i}</div>
+              <div style={{ fontFamily:font,fontSize:30,fontWeight:600,color:s.c,marginBottom:2 }}>{s.v}</div>
+              <div style={{ color:T.muted,fontSize:12,fontWeight:500 }}>{s.l}</div>
+            </Card>
+          ))}
+        </div>
+        <div style={{ display:"grid",gridTemplateColumns:"7fr 4fr",gap:20 }}>
+          <div>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+              <h2 style={{ fontFamily:font,fontSize:18,color:T.text,fontWeight:600 }}>Continue Learning</h2>
+              <Btn variant="ghost" onClick={()=>setScreen("cases")} style={{ fontSize:12 }}>View all →</Btn>
+            </div>
+            <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+              {myCases.slice(0,4).map(c=>(
+                <Card key={c.id} onClick={()=>startCase(c)} style={{ padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                  <div>
+                    <div style={{ display:"flex",gap:6,marginBottom:6 }}>
+                      <Tag label={c.topic} color={topicColor(c.topic)}/>
+                      <Tag label={c.difficulty} color={diffColor(c.difficulty)}/>
+                      {(userData.casesCompleted||[]).includes(c.id)&&<Tag label="Done" color={T.success}/>}
+                    </div>
+                    <div style={{ fontFamily:font,fontSize:15,fontWeight:600,color:T.text,marginBottom:2 }}>{c.title}</div>
+                    <div style={{ color:T.muted,fontSize:12 }}>{c.species} · {c.breed} · {c.signalment.split(",")[0]}</div>
+                  </div>
+                  <span style={{ color:T.accent,fontSize:18,marginLeft:12 }}>→</span>
+                </Card>
+              ))}
+            </div>
+            <div style={{ display:"flex",gap:8,marginTop:12 }}>
+              <Btn onClick={()=>setScreen("cases")}>Browse library</Btn>
+              <Btn variant="secondary" onClick={()=>{setQuizTopics(selectedTopics);setScreen("quiz");}}>Quick assessment</Btn>
+            </div>
+          </div>
+          <div>
+            <h2 style={{ fontFamily:font,fontSize:18,color:T.text,fontWeight:600,marginBottom:12 }}>My Topics</h2>
+            <Card style={{ padding:16,marginBottom:16 }}>
+              <div style={{ display:"flex",flexWrap:"wrap",gap:6 }}>
+                {selectedTopics.slice(0,8).map(t=>(
+                  <span key={t} style={{ background:topicColor(t)+"12",color:topicColor(t),border:`1px solid ${topicColor(t)}25`,borderRadius:5,padding:"3px 9px",fontSize:11,fontWeight:600 }}>
+                    {TOPIC_ICONS[t]} {t}
+                  </span>
+                ))}
+                {selectedTopics.length>8&&<span style={{ color:T.muted,fontSize:11,padding:"3px 9px" }}>+{selectedTopics.length-8} more</span>}
+              </div>
+              <button onClick={()=>setScreen("onboarding")} style={{ marginTop:10,background:"none",border:"none",color:T.muted,fontSize:12,cursor:"pointer",padding:0,fontFamily:fontSans }}>Edit topics ↗</button>
+            </Card>
+            <h2 style={{ fontFamily:font,fontSize:18,color:T.text,fontWeight:600,marginBottom:12 }}>Recent Activity</h2>
+            <Card style={{ padding:14 }}>
+              {recent.length===0
+                ? <div style={{ color:T.muted,fontSize:13,textAlign:"center",padding:"20px 0",fontStyle:"italic" }}>No activity yet — start your first case!</div>
+                : recent.map((s,i)=>(
+                  <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<recent.length-1?`1px solid ${T.border}`:"none" }}>
+                    <div>
+                      <div style={{ fontSize:13,fontWeight:500,color:T.text }}>{s.type==="case"?"🔬":""}{s.type==="quiz"?"📝":""} {s.topic||`Quiz · ${s.score}/${s.total}`}</div>
+                      <div style={{ color:T.muted,fontSize:11 }}>{new Date(s.date).toLocaleDateString("en-IN")}</div>
+                    </div>
+                    {s.type==="quiz"&&<span style={{ color:T.warn,fontSize:13,fontWeight:700 }}>{Math.round(s.score/s.total*100)}%</span>}
+                  </div>
+                ))
+              }
+            </Card>
+          </div>
+        </div>
+      </PageWrap>
+    );
+  }
+
+  // ── LIBRARY ────────────────────────────────────────────────────────────────
+  if(screen==="cases") {
+    const isAdmin=user?.role==="admin";
+    const filtered=(caseView==="cases"?cases:questions)
+      .filter(x=>(caseFilter.topic==="All"||x.topic===caseFilter.topic)&&(caseFilter.diff==="All"||x.difficulty===caseFilter.diff)&&(caseFilter.sp==="All"||x.species===caseFilter.sp));
+    return (
+      <PageWrap>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:22 }}>
+          <div>
+            <h1 style={{ fontFamily:font,fontSize:28,fontWeight:600,color:T.text,marginBottom:4 }}>Content Library</h1>
+            <p style={{ color:T.muted,fontSize:13 }}>{cases.length} clinical cases · {questions.length} assessment questions</p>
+          </div>
+          <div style={{ display:"flex",gap:6 }}>
+            {["cases","assessment"].map(v=>(
+              <button key={v} onClick={()=>setCaseView(v)} style={{ padding:"7px 16px",borderRadius:8,border:`1px solid ${caseView===v?T.accent:T.border}`,background:caseView===v?T.accentLight:"transparent",color:caseView===v?T.accent:T.muted,cursor:"pointer",fontSize:13,fontFamily:fontSans,fontWeight:500 }}>
+                {v==="cases"?"🔬 Cases":"📋 Assessments"}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display:"flex",gap:8,marginBottom:18,flexWrap:"wrap",alignItems:"center" }}>
+          {[{l:"Topic",v:caseFilter.topic,k:"topic",opts:["All",...ALL_TOPICS]},{l:"Difficulty",v:caseFilter.diff,k:"diff",opts:["All","Beginner","Intermediate","Advanced"]},{l:"Species",v:caseFilter.sp,k:"sp",opts:["All","Dog","Cat"]}].map(f=>(
+            <select key={f.k} value={f.v} onChange={e=>setCaseFilter(p=>({...p,[f.k]:e.target.value}))}
+              style={{ background:T.surface,border:`1px solid ${T.border}`,color:T.text2,borderRadius:8,padding:"7px 12px",fontSize:13,cursor:"pointer" }}>
+              {f.opts.map(o=><option key={o}>{o}</option>)}
+            </select>
+          ))}
+          <span style={{ color:T.muted,fontSize:12,marginLeft:4 }}>{filtered.length} results</span>
+          {caseView==="assessment"&&<Btn onClick={()=>{setQuizTopics(caseFilter.topic==="All"?selectedTopics:[caseFilter.topic]);setScreen("quiz");}} style={{ marginLeft:"auto" }}>Start quiz on filter →</Btn>}
+        </div>
+        {caseView==="cases"?(
+          <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+            {filtered.map(c=>(
+              <Card key={c.id} style={{ padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                <div style={{ flex:1, cursor:"pointer" }} onClick={()=>!isAdmin&&startCase(c)}>
+                  <div style={{ display:"flex",gap:6,marginBottom:7 }}>
+                    <Tag label={c.topic} color={topicColor(c.topic)}/>
+                    <Tag label={c.difficulty} color={diffColor(c.difficulty)}/>
+                    <Tag label={c.species} color={T.muted}/>
+                    {(userData.casesCompleted||[]).includes(c.id)&&<Tag label="✓ Done" color={T.success}/>}
+                  </div>
+                  <div style={{ fontFamily:font,fontSize:16,fontWeight:600,color:T.text,marginBottom:3 }}>{c.title}</div>
+                  <div style={{ color:T.muted,fontSize:12,marginBottom:3 }}>{c.signalment}</div>
+                  <div style={{ color:T.muted,fontSize:11 }}>📖 {c.reference}</div>
+                </div>
+                <div style={{ display:"flex",gap:8,marginLeft:16 }}>
+                  {!isAdmin&&<Btn onClick={()=>startCase(c)}>Start case →</Btn>}
+                  {isAdmin&&<Btn variant="danger" onClick={()=>deleteCase(c.id)}>Delete</Btn>}
+                </div>
+              </Card>
+            ))}
+            {filtered.length===0&&<div style={{ textAlign:"center",padding:"40px 0",color:T.muted,fontStyle:"italic" }}>No cases match current filters</div>}
+          </div>
+        ):(
+          <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+            {filtered.map((q,i)=>(
+              <Card key={q.id} style={{ padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex",gap:6,marginBottom:7 }}>
+                    <Tag label={q.topic} color={topicColor(q.topic)}/>
+                    <Tag label={q.difficulty} color={diffColor(q.difficulty)}/>
+                    <Tag label={q.species||"Dog"} color={T.muted}/>
+                  </div>
+                  <div style={{ fontSize:14,color:T.text,lineHeight:1.6 }}><span style={{ color:T.muted,marginRight:6 }}>{i+1}.</span>{q.question}</div>
+                  <div style={{ color:T.muted,fontSize:11,marginTop:4 }}>📖 {q.reference}</div>
+                </div>
+                {isAdmin&&<Btn variant="danger" onClick={()=>deleteQuestion(q.id)} style={{ marginLeft:12,flexShrink:0 }}>Delete</Btn>}
+              </Card>
+            ))}
+          </div>
+        )}
+      </PageWrap>
+    );
+  }
+
+  // ── CASE CHAT ──────────────────────────────────────────────────────────────
+  if(screen==="case-chat") {
+    const c=cases.find(x=>x.id===activeCaseId);
+    return (
+      <div style={{ background:T.bg,height:"100vh",display:"flex",flexDirection:"column",fontFamily:fontSans }}>
+        <style>{GLOBAL_CSS}</style>
+        <ApiKeyModal/>
+      <div style={{ background:T.surface,borderBottom:`1px solid ${T.border}`,padding:"10px 24px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+          <div style={{ display:"flex",alignItems:"center",gap:12 }}>
+            <Btn variant="ghost" onClick={()=>{setScreen("cases");setActiveCaseId(null);setMessages([]);}} style={{ padding:"5px 12px",fontSize:12 }}>← Back</Btn>
+            <div>
+              <div style={{ fontFamily:font,fontSize:15,fontWeight:600,color:T.text }}>{c?.title}</div>
+              <div style={{ fontSize:11,color:T.muted }}>{c?.signalment}</div>
+            </div>
+          </div>
+          <div style={{ display:"flex",gap:6,alignItems:"center" }}><Tag label={c?.topic} color={topicColor(c?.topic||"")}/><Tag label={c?.difficulty} color={diffColor(c?.difficulty||"")}/>{user && <UsageBadge/>}</div>
+          <Btn variant="success" onClick={completeCase}>Mark complete ✓</Btn>
+        </div>
+        <div style={{ flex:1,overflowY:"auto",padding:"20px",display:"flex",flexDirection:"column",gap:12,maxWidth:800,width:"100%",margin:"0 auto" }}>
+          {messages.map((m,i)=>(
+            <div key={i} style={{ display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start",gap:8,animation:"fadeUp 0.3s ease" }}>
+              {m.role==="assistant"&&<div style={{ width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${T.accent},#8b5cf6)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0,marginTop:2 }}>🐾</div>}
+              <div style={{ maxWidth:"76%",background:m.role==="user"?T.accent:T.surface,border:m.role==="user"?"none":`1px solid ${T.border}`,borderRadius:m.role==="user"?"12px 12px 4px 12px":"12px 12px 12px 4px",padding:"12px 16px",fontSize:14,lineHeight:1.7,color:m.role==="user"?"white":T.text,whiteSpace:"pre-wrap" }}>
+                {m.content}
+              </div>
+            </div>
+          ))}
+          {chatLoading&&<div style={{ display:"flex",gap:8,alignItems:"center" }}>
+            <div style={{ width:30,height:30,borderRadius:"50%",background:`linear-gradient(135deg,${T.accent},#8b5cf6)`,display:"flex",alignItems:"center",justifyContent:"center" }}>🐾</div>
+            <div style={{ background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"12px 16px",display:"flex",gap:4 }}>
+              {[0,1,2].map(i=><div key={i} style={{ width:7,height:7,borderRadius:"50%",background:T.accent,animation:`pulse3 1.4s ${i*0.2}s infinite` }}/>)}
+            </div>
+          </div>}
+          <div ref={msgEnd}/>
+        </div>
+        <div style={{ borderTop:`1px solid ${T.border}`,padding:"12px 24px",background:T.surface }}>
+          <div style={{ maxWidth:800,margin:"0 auto",display:"flex",gap:8 }}>
+            <input value={chatInput} onChange={e=>setChatInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&sendChat()}
+              placeholder="Share your clinical reasoning..."
+              style={{ flex:1,background:T.bg,border:`1px solid ${T.border}`,borderRadius:9,padding:"10px 14px",color:T.text,fontSize:14 }}
+              onFocus={e=>e.currentTarget.style.borderColor=T.accent} onBlur={e=>e.currentTarget.style.borderColor=T.border}/>
+            <Btn onClick={sendChat} disabled={!chatInput.trim()||chatLoading}>Send →</Btn>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── QUIZ SETUP ─────────────────────────────────────────────────────────────
+  if(screen==="quiz") return (
+    <PageWrap>
+      <div style={{ maxWidth:680,margin:"0 auto" }}>
+        <h1 style={{ fontFamily:font,fontSize:28,fontWeight:600,color:T.text,marginBottom:6 }}>Clinical Assessment</h1>
+        <p style={{ color:T.muted,fontSize:14,marginBottom:24 }}>Select topics and take a randomised 10-question assessment. Full Ettinger-referenced explanations for every answer.</p>
+        <Card style={{ padding:24,marginBottom:16 }}>
+          <div style={{ fontSize:13,fontWeight:600,color:T.text2,marginBottom:12 }}>Include topics:</div>
+          <div style={{ display:"flex",flexWrap:"wrap",gap:7,marginBottom:14 }}>
+            {ALL_TOPICS.map(t=>{
+              const sel=quizTopics.includes(t),c=topicColor(t);
+              return <span key={t} onClick={()=>setQuizTopics(p=>sel?p.filter(x=>x!==t):[...p,t])}
+                style={{ background:sel?c+"14":T.surface2,color:sel?c:T.muted,border:`1px solid ${sel?c+"40":T.border}`,borderRadius:6,padding:"5px 12px",fontSize:12,cursor:"pointer",fontWeight:sel?600:400,transition:"all 0.15s" }}>
+                {TOPIC_ICONS[t]} {t}
+              </span>;
+            })}
+          </div>
+          <div style={{ display:"flex",gap:8 }}>
+            <Btn variant="secondary" onClick={()=>setQuizTopics(ALL_TOPICS)} style={{ fontSize:12 }}>All topics</Btn>
+            <Btn variant="secondary" onClick={()=>setQuizTopics(selectedTopics)} style={{ fontSize:12 }}>My topics</Btn>
+          </div>
+        </Card>
+        <Card style={{ padding:"12px 18px",marginBottom:18,display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+          <span style={{ color:T.text2,fontSize:13 }}><strong style={{ color:T.text }}>{questions.filter(q=>quizTopics.length===0||quizTopics.includes(q.topic)).length}</strong> questions in pool · 10 will be selected randomly</span>
+        </Card>
+        <Btn onClick={startQuiz} style={{ width:"100%",justifyContent:"center",padding:"12px",fontSize:14,borderRadius:10 }}>Begin assessment →</Btn>
+      </div>
+    </PageWrap>
+  );
+
+  // ── QUIZ SESSION ───────────────────────────────────────────────────────────
+  if(screen==="quiz-session") {
+    if(quizDone) {
+      const score=quizQs.filter(q=>quizAnswers[q.id]===q.correct).length;
+      const pct=Math.round(score/quizQs.length*100);
+      return (
+        <PageWrap>
+          <div style={{ maxWidth:600,margin:"0 auto",textAlign:"center",padding:"40px 0",animation:"fadeUp 0.4s ease" }}>
+            <div style={{ fontSize:60,marginBottom:12 }}>{pct>=80?"🏆":pct>=60?"✅":"📚"}</div>
+            <h1 style={{ fontFamily:font,fontSize:32,color:T.text,marginBottom:8 }}>Assessment complete</h1>
+            <div style={{ fontFamily:font,fontSize:52,fontWeight:600,color:T.accent,margin:"16px 0" }}>{score}/{quizQs.length}</div>
+            <p style={{ color:T.text2,fontSize:15,marginBottom:28,fontStyle:"italic" }}>{pct>=80?"Excellent clinical reasoning.":pct>=60?"Good performance — review the missed explanations.":"Review the Ettinger chapters for topics you missed."}</p>
+            <Card style={{ padding:20,marginBottom:20,textAlign:"left" }}>
+              <div style={{ fontFamily:font,fontSize:16,fontWeight:600,color:T.text,marginBottom:12 }}>Question review</div>
+              {quizQs.map((q,i)=>(<div key={i} style={{ display:"flex",gap:10,padding:"8px 0",borderBottom:`1px solid ${T.border}`,alignItems:"flex-start" }}>
+                <span>{quizAnswers[q.id]===q.correct?"✅":"❌"}</span>
+                <div>
+                  <div style={{ color:T.text,fontSize:13,lineHeight:1.4 }}>{q.question.slice(0,90)}...</div>
+                  <div style={{ color:T.muted,fontSize:11,marginTop:2 }}>📖 {q.reference}</div>
+                </div>
+              </div>))}
+            </Card>
+            <div style={{ display:"flex",gap:10,justifyContent:"center" }}>
+              <Btn onClick={()=>setScreen("quiz")}>New assessment</Btn>
+              <Btn variant="secondary" onClick={()=>setScreen("performance")}>View my progress</Btn>
+            </div>
+          </div>
+        </PageWrap>
+      );
+    }
+    const q=quizQs[quizIdx];
+    const answered=quizAnswers[q?.id];
+    const isAnswered=answered!==undefined;
+    return (
+      <PageWrap>
+        <div style={{ maxWidth:720,margin:"0 auto" }}>
+          <div style={{ display:"flex",justifyContent:"space-between",marginBottom:16 }}>
+            <div><h2 style={{ fontFamily:font,fontSize:22,color:T.text }}>Question {quizIdx+1} of {quizQs.length}</h2></div>
+            <div style={{ fontSize:13,color:T.muted }}>Score: <strong style={{ color:T.accent }}>{quizQs.filter(q=>quizAnswers[q.id]===q.correct).length}</strong></div>
+          </div>
+          <div style={{ height:4,background:T.border,borderRadius:4,marginBottom:22 }}>
+            <div style={{ height:"100%",background:T.accent,borderRadius:4,width:`${(quizIdx/quizQs.length)*100}%`,transition:"width 0.3s" }}/>
+          </div>
+          {q&&(<>
+            <Card style={{ padding:22,marginBottom:14 }}>
+              <div style={{ display:"flex",gap:6,marginBottom:12 }}>
+                <Tag label={q.topic} color={topicColor(q.topic)}/><Tag label={q.difficulty} color={diffColor(q.difficulty)}/><Tag label={q.species||"Dog"} color={T.muted}/>
+              </div>
+              <p style={{ fontFamily:font,fontSize:17,color:T.text,lineHeight:1.65 }}>{q.question}</p>
+            </Card>
+            <div style={{ display:"flex",flexDirection:"column",gap:8,marginBottom:16 }}>
+              {q.options.map((opt,idx)=>{
+                let bg=T.surface,border=T.border,col=T.text,lc=T.muted;
+                if(isAnswered){ if(idx===q.correct){bg=T.successLight;border=T.success+"60";col=T.success;lc=T.success;} else if(idx===answered){bg=T.dangerLight;border=T.danger+"60";col=T.danger;lc=T.danger;} }
+                return <button key={idx} onClick={()=>!isAnswered&&handleQuizAnswer(idx)}
+                  style={{ background:bg,border:`1.5px solid ${border}`,borderRadius:10,padding:"13px 16px",color:col,textAlign:"left",cursor:isAnswered?"default":"pointer",fontSize:14,fontFamily:fontSans,lineHeight:1.5,transition:"all 0.2s" }}
+                  onMouseEnter={e=>{ if(!isAnswered) e.currentTarget.style.borderColor=T.border2; }}
+                  onMouseLeave={e=>{ if(!isAnswered) e.currentTarget.style.borderColor=T.border; }}>
+                  <span style={{ fontWeight:700,marginRight:8,color:lc }}>{String.fromCharCode(65+idx)}.</span>{opt}
+                </button>;
+              })}
+            </div>
+            {isAnswered&&(<Card style={{ padding:22,background:answered===q.correct?T.successLight:T.surface,border:`1px solid ${answered===q.correct?T.success+"40":T.border}` }}>
+              <div style={{ fontWeight:600,fontSize:15,color:answered===q.correct?T.success:T.danger,marginBottom:10 }}>
+                {answered===q.correct?"✅ Correct!":"❌ Incorrect — here's the clinical reasoning:"}
+              </div>
+              <p style={{ color:T.text2,fontSize:14,lineHeight:1.7,marginBottom:10 }}>{q.explanation}</p>
+              {answered!==q.correct&&q.wrong?.[answered]&&(
+                <div style={{ background:T.dangerLight,border:`1px solid ${T.danger}25`,borderRadius:8,padding:12,marginBottom:10,fontSize:13,color:T.danger }}>
+                  <strong>Why option {String.fromCharCode(65+answered)} is wrong:</strong> {q.wrong[answered]}
+                </div>
+              )}
+              <div style={{ background:T.surface2,borderRadius:7,padding:"8px 12px",fontSize:12,color:T.muted,marginBottom:14 }}>📖 {q.reference}</div>
+              <Btn onClick={nextQ}>{quizIdx+1>=quizQs.length?"View results →":"Next question →"}</Btn>
+            </Card>)}
+          </>)}
+        </div>
+      </PageWrap>
+    );
+  }
+
+  // ── PERFORMANCE ────────────────────────────────────────────────────────────
+  if(screen==="performance") {
+    const quizzes=userData.quizzesDone||[];
+    const topicScores=userData.topicScores||{};
+    const avg=quizzes.length?Math.round(quizzes.reduce((a,q)=>a+q.score/q.total*100,0)/quizzes.length):0;
+    return (
+      <PageWrap>
+        <h1 style={{ fontFamily:font,fontSize:28,fontWeight:600,color:T.text,marginBottom:4 }}>My Progress</h1>
+        <p style={{ color:T.muted,fontSize:13,marginBottom:24 }}>Track your clinical training over time</p>
+        <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:24 }}>
+          {[{l:"Cases Done",v:userData.casesCompleted?.length||0,c:T.accent},{l:"Quizzes Taken",v:quizzes.length,c:"#8b5cf6"},{l:"Avg Quiz Score",v:avg?`${avg}%`:"—",c:T.warn},{l:"Topics Covered",v:Object.keys(topicScores).length,c:T.success}].map(s=>(
+            <Card key={s.l} style={{ padding:"18px 20px" }}>
+              <div style={{ fontFamily:font,fontSize:30,fontWeight:600,color:s.c,marginBottom:2 }}>{s.v}</div>
+              <div style={{ color:T.muted,fontSize:12 }}>{s.l}</div>
+            </Card>
+          ))}
+        </div>
+        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:18 }}>
+          <Card style={{ padding:22 }}>
+            <h3 style={{ fontFamily:font,fontSize:17,color:T.text,marginBottom:16 }}>Topic Performance</h3>
+            {!Object.keys(topicScores).length
+              ? <div style={{ color:T.muted,textAlign:"center",fontStyle:"italic",padding:"20px 0" }}>Complete assessments to see topic scores</div>
+              : Object.entries(topicScores).map(([t,s])=>{
+                const pct=Math.round(s.correct/s.total*100);
+                return <div key={t} style={{ marginBottom:14 }}>
+                  <div style={{ display:"flex",justifyContent:"space-between",marginBottom:4 }}>
+                    <span style={{ fontSize:13,color:T.text }}>{TOPIC_ICONS[t]} {t}</span>
+                    <span style={{ fontSize:13,fontWeight:600,color:pct>=70?T.success:pct>=50?T.warn:T.danger }}>{pct}% ({s.correct}/{s.total})</span>
+                  </div>
+                  <div style={{ height:6,background:T.border,borderRadius:3 }}>
+                    <div style={{ height:"100%",borderRadius:3,background:pct>=70?T.success:pct>=50?T.warn:T.danger,width:`${pct}%`,transition:"width 0.5s" }}/>
+                  </div>
+                </div>;
+              })
+            }
+          </Card>
+          <Card style={{ padding:22 }}>
+            <h3 style={{ fontFamily:font,fontSize:17,color:T.text,marginBottom:16 }}>Quiz History</h3>
+            {!quizzes.length
+              ? <div style={{ color:T.muted,textAlign:"center",fontStyle:"italic",padding:"20px 0" }}>No quizzes yet</div>
+              : [...quizzes].reverse().slice(0,8).map((q,i)=>{
+                const pct=Math.round(q.score/q.total*100);
+                return <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:`1px solid ${T.border}` }}>
+                  <div>
+                    <div style={{ fontSize:13,fontWeight:500,color:T.text }}>{q.score}/{q.total} questions correct</div>
+                    <div style={{ fontSize:11,color:T.muted }}>{new Date(q.date).toLocaleDateString("en-IN")}</div>
+                  </div>
+                  <span style={{ fontWeight:700,color:pct>=80?T.success:pct>=60?T.warn:T.danger }}>{pct}%</span>
+                </div>;
+              })
+            }
+            {quizzes.length>0&&<Btn onClick={()=>setScreen("quiz")} style={{ marginTop:14,width:"100%",justifyContent:"center" }}>Take new assessment</Btn>}
+          </Card>
+        </div>
+      </PageWrap>
+    );
+  }
+
+  // ── MY CASES FEED ──────────────────────────────────────────────────────────
+  if(screen==="feed") {
+    const [commentInputs, setCommentInputs] = useState({});
+    return (
+      <PageWrap>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24 }}>
+          <div>
+            <h1 style={{ fontFamily:font,fontSize:28,fontWeight:600,color:T.text,marginBottom:4 }}>My Cases</h1>
+            <p style={{ color:T.muted,fontSize:13 }}>Share and learn from real clinical cases across all Supertails clinics</p>
+          </div>
+          <Btn onClick={()=>setPostingCase(true)}>+ Share a case</Btn>
+        </div>
+
+        {/* Post form */}
+        {postingCase&&(
+          <Card style={{ padding:24,marginBottom:20,border:`1.5px solid ${T.accent}` }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
+              <h3 style={{ fontFamily:font,fontSize:18,color:T.text }}>Share Your Clinical Case</h3>
+              <button onClick={()=>setPostingCase(false)} style={{ background:"none",border:"none",color:T.muted,cursor:"pointer",fontSize:18 }}>✕</button>
+            </div>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12 }}>
+              <div><label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Case Title *</label><Input value={newPostForm.title} onChange={e=>setNewPostForm(p=>({...p,title:e.target.value}))} placeholder="e.g. Tick paralysis — a lesson in clinical observation"/></div>
+              <div><label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Species & Breed</label><Input value={newPostForm.breed} onChange={e=>setNewPostForm(p=>({...p,breed:e.target.value}))} placeholder="e.g. Lab, 3 years, MN"/></div>
+            </div>
+            <div style={{ marginBottom:12 }}><label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Chief Complaint *</label><Input value={newPostForm.chiefComplaint} onChange={e=>setNewPostForm(p=>({...p,chiefComplaint:e.target.value}))} placeholder="Why did the patient present?"/></div>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12 }}>
+              <div><label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Clinical Findings</label><Input multiline value={newPostForm.clinicalFindings} onChange={e=>setNewPostForm(p=>({...p,clinicalFindings:e.target.value}))} placeholder="Vitals, physical exam findings..."/></div>
+              <div><label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Diagnostics Summary</label><Input multiline value={newPostForm.diagnosticsSummary} onChange={e=>setNewPostForm(p=>({...p,diagnosticsSummary:e.target.value}))} placeholder="Key lab/imaging findings..."/></div>
+            </div>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12 }}>
+              <div><label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Management</label><Input multiline value={newPostForm.management} onChange={e=>setNewPostForm(p=>({...p,management:e.target.value}))} placeholder="Treatment approach..."/></div>
+              <div><label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Outcome</label><Input multiline value={newPostForm.outcome} onChange={e=>setNewPostForm(p=>({...p,outcome:e.target.value}))} placeholder="Patient outcome..."/></div>
+            </div>
+            <div style={{ marginBottom:12 }}><label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Key Learning Point 💡</label><Input multiline value={newPostForm.learningPoint} onChange={e=>setNewPostForm(p=>({...p,learningPoint:e.target.value}))} placeholder="What would you want your colleagues to remember from this case?"/></div>
+            <div style={{ marginBottom:16 }}><label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Tags (comma-separated)</label><Input value={newPostForm.tags} onChange={e=>setNewPostForm(p=>({...p,tags:e.target.value}))} placeholder="e.g. Neurology, Emergency, Clinical Pearl"/></div>
+            <div style={{ display:"flex",gap:8,justifyContent:"flex-end" }}>
+              <Btn variant="secondary" onClick={()=>setPostingCase(false)}>Cancel</Btn>
+              <Btn onClick={submitPost} disabled={!newPostForm.title||!newPostForm.chiefComplaint}>Publish case →</Btn>
+            </div>
+          </Card>
+        )}
+
+        {/* Feed */}
+        <div style={{ display:"flex",flexDirection:"column",gap:20,maxWidth:760,margin:"0 auto" }}>
+          {feedPosts.map(post=>(
+              <FeedPostCard key={post.id} post={post} T={T} font={font} fontSans={fontSans} topicColor={topicColor} addReaction={addReaction} addComment={addComment} user={user}/>
+          ))}
+          {feedPosts.length===0&&<div style={{ textAlign:"center",padding:"60px 0",color:T.muted,fontStyle:"italic" }}>No cases shared yet. Be the first to post!</div>}
+        </div>
+      </PageWrap>
+    );
+  }
+  
+
+  // ── ADMIN DASHBOARD ────────────────────────────────────────────────────────
+  if(screen==="admin") {
+    const allVets=USERS_DB.filter(x=>x.role==="vet");
+    const totalCases=Object.values(adminData).reduce((a,d)=>a+(d.progress?.casesCompleted?.length||0),0);
+    const totalQuizzes=Object.values(adminData).reduce((a,d)=>a+(d.progress?.quizzesDone?.length||0),0);
+    const avgAll=(()=>{ const all=Object.values(adminData).flatMap(d=>d.progress?.quizzesDone||[]); return all.length?Math.round(all.reduce((a,q)=>a+q.score/q.total*100,0)/all.length):0; })();
+    const topicAct={}; Object.values(adminData).forEach(d=>(d.progress?.sessions||[]).forEach(s=>{ if(s.topic) topicAct[s.topic]=(topicAct[s.topic]||0)+1; }));
+    const ADMIN_TABS=[["overview","Overview"],["users","Users & Activity"],["content","Content Library"],["generate","AI Generator"]];
+    return (
+      <PageWrap>
+        <div style={{ marginBottom:24 }}>
+          <h1 style={{ fontFamily:font,fontSize:28,fontWeight:600,color:T.text,marginBottom:4 }}>Admin Dashboard</h1>
+          <p style={{ color:T.muted,fontSize:13 }}>Manage training content, monitor vet progress, and generate new content with AI</p>
+        </div>
+        {/* Tab nav */}
+        <div style={{ display:"flex",gap:2,marginBottom:24,borderBottom:`1px solid ${T.border}`,paddingBottom:0 }}>
+          {ADMIN_TABS.map(([k,l])=>(
+            <button key={k} onClick={()=>setAdminTab(k)} style={{ padding:"8px 18px",background:"none",border:"none",cursor:"pointer",fontSize:13,fontWeight:500,fontFamily:fontSans,color:adminTab===k?T.accent:T.muted,borderBottom:adminTab===k?`2px solid ${T.accent}`:"2px solid transparent",marginBottom:-1,transition:"color 0.15s" }}>
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {/* OVERVIEW */}
+        {adminTab==="overview"&&(
+          <div style={{ animation:"fadeUp 0.3s ease" }}>
+            <div style={{ display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:24 }}>
+              {[{l:"Total Vets",v:allVets.length,c:T.accent},{l:"Cases Completed",v:totalCases,c:T.success},{l:"Quizzes Taken",v:totalQuizzes,c:"#8b5cf6"},{l:"Avg Quiz Score",v:avgAll?`${avgAll}%`:"—",c:T.warn},{l:"Content Items",v:cases.length+questions.length,c:"#ec4899"}].map(s=>(
+                <Card key={s.l} style={{ padding:"16px 18px" }}>
+                  <div style={{ fontFamily:font,fontSize:28,fontWeight:600,color:s.c,marginBottom:2 }}>{s.v}</div>
+                  <div style={{ color:T.muted,fontSize:12 }}>{s.l}</div>
+                </Card>
+              ))}
+            </div>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:18 }}>
+              <Card style={{ padding:22 }}>
+                <h3 style={{ fontFamily:font,fontSize:17,color:T.text,marginBottom:14 }}>Vet Training Status</h3>
+                {allVets.map(v=>{
+                  const d=adminData[v.id]?.progress;
+                  const cs2=d?.casesCompleted?.length||0; const qz=d?.quizzesDone?.length||0;
+                  const av2=qz?Math.round(d.quizzesDone.reduce((a,q)=>a+q.score/q.total*100,0)/qz):null;
+                  const last=d?.sessions?.[d.sessions.length-1];
+                  return <div key={v.id} style={{ padding:"11px 0",borderBottom:`1px solid ${T.border}` }}>
+                    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                      <div style={{ display:"flex",gap:10,alignItems:"center" }}>
+                        <div style={{ width:32,height:32,borderRadius:"50%",background:v.color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"white" }}>{v.avatar}</div>
+                        <div><div style={{ fontSize:14,fontWeight:500,color:T.text }}>{v.name}</div><div style={{ fontSize:11,color:T.muted }}>{v.clinic}</div></div>
+                      </div>
+                      <div style={{ display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end" }}>
+                        <Tag label={`${cs2} cases`} color={T.accent}/><Tag label={`${qz} quizzes`} color="#8b5cf6"/>
+                        {av2!==null&&<Tag label={`${av2}% avg`} color={av2>=70?T.success:av2>=50?T.warn:T.danger}/>}
+                        {!last&&<Tag label="Not started" color={T.danger}/>}
+                      </div>
+                    </div>
+                    {last&&<div style={{ color:T.muted,fontSize:11,marginTop:4,marginLeft:42 }}>Last active: {new Date(last.date).toLocaleDateString("en-IN")}</div>}
+                  </div>;
+                })}
+              </Card>
+              <Card style={{ padding:22 }}>
+                <h3 style={{ fontFamily:font,fontSize:17,color:T.text,marginBottom:14 }}>Topic Activity</h3>
+                {!Object.keys(topicAct).length
+                  ? <div style={{ color:T.muted,textAlign:"center",fontStyle:"italic",padding:"20px 0" }}>No sessions yet</div>
+                  : Object.entries(topicAct).sort((a,b)=>b[1]-a[1]).map(([t,count])=>(
+                    <div key={t} style={{ marginBottom:12 }}>
+                      <div style={{ display:"flex",justifyContent:"space-between",marginBottom:3 }}>
+                        <span style={{ fontSize:13,color:T.text }}>{TOPIC_ICONS[t]} {t}</span>
+                        <span style={{ color:T.muted,fontSize:12 }}>{count}</span>
+                      </div>
+                      <div style={{ height:5,background:T.border,borderRadius:3 }}>
+                        <div style={{ height:"100%",borderRadius:3,background:topicColor(t),width:`${Math.min(100,(count/Math.max(...Object.values(topicAct)))*100)}%` }}/>
+                      </div>
+                    </div>
+                  ))
+                }
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* USERS & ACTIVITY */}
+        {adminTab==="users"&&(
+          <div style={{ animation:"fadeUp 0.3s ease" }}>
+            <Card style={{ padding:22 }}>
+              <h3 style={{ fontFamily:font,fontSize:17,color:T.text,marginBottom:16 }}>Recent Activity Log</h3>
+              {(()=>{
+                const allS=allVets.flatMap(v=>(adminData[v.id]?.progress?.sessions||[]).map(s=>({...s,vet:v.name,clinic:v.clinic,vetColor:v.color,avatar:v.avatar})));
+                const sorted=allS.sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,20);
+                if(!sorted.length) return <div style={{ color:T.muted,textAlign:"center",fontStyle:"italic",padding:"30px 0" }}>No activity recorded yet</div>;
+                return sorted.map((s,i)=>(
+                  <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${T.border}` }}>
+                    <div style={{ display:"flex",gap:10,alignItems:"center" }}>
+                      <div style={{ width:30,height:30,borderRadius:"50%",background:s.vetColor||T.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:"white",flexShrink:0 }}>{s.avatar}</div>
+                      <div>
+                        <div style={{ fontSize:13,fontWeight:500,color:T.text }}>{s.vet}</div>
+                        <div style={{ fontSize:11,color:T.muted }}>{s.clinic} · {s.type==="case"?`📋 Case: ${cases.find(x=>x.id===s.id)?.title?.slice(0,40)||s.id}...`:`📝 Quiz: ${s.score}/${s.total}`}</div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      {s.type==="quiz"&&<div style={{ fontSize:13,fontWeight:700,color:s.score/s.total>=0.7?T.success:T.warn }}>{Math.round(s.score/s.total*100)}%</div>}
+                      <div style={{ color:T.muted,fontSize:11 }}>{new Date(s.date).toLocaleDateString("en-IN")}</div>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </Card>
+          </div>
+        )}
+
+        {/* CONTENT LIBRARY */}
+        {adminTab==="content"&&(
+          <div style={{ animation:"fadeUp 0.3s ease" }}>
+            <div style={{ display:"flex",justifyContent:"space-between",marginBottom:16 }}>
+              <div>
+                <div style={{ fontFamily:font,fontSize:18,color:T.text,fontWeight:600 }}>Content Library Management</div>
+                <div style={{ color:T.muted,fontSize:13 }}>{cases.length} cases · {questions.length} questions</div>
+              </div>
+              <div style={{ display:"flex",gap:6 }}>
+                {["cases","assessment"].map(v=>(
+                  <button key={v} onClick={()=>setCaseView(v)} style={{ padding:"6px 14px",borderRadius:8,border:`1px solid ${caseView===v?T.accent:T.border}`,background:caseView===v?T.accentLight:"transparent",color:caseView===v?T.accent:T.muted,cursor:"pointer",fontSize:13,fontFamily:fontSans }}>
+                    {v==="cases"?"Cases":"Questions"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {caseView==="cases"?(
+              <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                {cases.map(c=>(
+                  <Card key={c.id} style={{ padding:"14px 18px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                    <div>
+                      <div style={{ display:"flex",gap:6,marginBottom:5 }}>
+                        <Tag label={c.topic} color={topicColor(c.topic)}/><Tag label={c.difficulty} color={diffColor(c.difficulty)}/><Tag label={c.species} color={T.muted}/>
+                        {c.id.startsWith("gen_")&&<Tag label="AI Generated" color="#8b5cf6"/>}
+                      </div>
+                      <div style={{ fontFamily:font,fontSize:15,fontWeight:600,color:T.text }}>{c.title}</div>
+                      <div style={{ color:T.muted,fontSize:12 }}>{c.signalment} · {c.reference}</div>
+                    </div>
+                    <Btn variant="danger" onClick={()=>deleteCase(c.id)} style={{ flexShrink:0 }}>Delete</Btn>
+                  </Card>
+                ))}
+              </div>
+            ):(
+              <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+                {questions.map((q,i)=>(
+                  <Card key={q.id} style={{ padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ display:"flex",gap:6,marginBottom:5 }}>
+                        <Tag label={q.topic} color={topicColor(q.topic)}/><Tag label={q.difficulty} color={diffColor(q.difficulty)}/>
+                        {q.id.startsWith("gen_")&&<Tag label="AI Generated" color="#8b5cf6"/>}
+                      </div>
+                      <div style={{ fontSize:13,color:T.text,lineHeight:1.5 }}>{q.question.slice(0,120)}...</div>
+                    </div>
+                    <Btn variant="danger" onClick={()=>deleteQuestion(q.id)} style={{ marginLeft:12,flexShrink:0 }}>Delete</Btn>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* AI GENERATOR */}
+        {adminTab==="generate"&&(
+          <div style={{ animation:"fadeUp 0.3s ease", maxWidth:760 }}>
+            <Card style={{ padding:26,marginBottom:20 }}>
+              <h3 style={{ fontFamily:font,fontSize:19,color:T.text,marginBottom:4 }}>AI Content Generator</h3>
+              <p style={{ color:T.muted,fontSize:13,marginBottom:20 }}>Suggest a clinical topic and AI will automatically generate a new case or assessment questions, grounded in Ettinger's Textbook and clinical best practices.</p>
+              <div style={{ display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:12,marginBottom:12 }}>
+                <div>
+                  <label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Clinical Topic *</label>
+                  <Input value={genTopic} onChange={e=>setGenTopic(e.target.value)} placeholder="e.g. Feline diabetes mellitus, Canine parvovirus, Osteoarthritis management..."/>
+                </div>
+                <div>
+                  <label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Species</label>
+                  <select value={genSpecies} onChange={e=>setGenSpecies(e.target.value)} style={{ width:"100%",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:14,color:T.text }}>
+                    <option>Dog</option><option>Cat</option><option>Both</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize:12,fontWeight:600,color:T.text2,display:"block",marginBottom:4 }}>Difficulty</label>
+                  <select value={genDiff} onChange={e=>setGenDiff(e.target.value)} style={{ width:"100%",background:T.surface,border:`1px solid ${T.border}`,borderRadius:8,padding:"9px 12px",fontSize:14,color:T.text }}>
+                    <option>Beginner</option><option>Intermediate</option><option>Advanced</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display:"flex",gap:8,marginBottom:20,alignItems:"center" }}>
+                <span style={{ fontSize:13,color:T.text2,fontWeight:500 }}>Generate:</span>
+                {[["case","Clinical Case"],["questions","3 MCQ Questions"]].map(([v,l])=>(
+                  <button key={v} onClick={()=>setGenType(v)} style={{ padding:"6px 14px",borderRadius:8,border:`1px solid ${genType===v?T.accent:T.border}`,background:genType===v?T.accentLight:"transparent",color:genType===v?T.accent:T.muted,cursor:"pointer",fontSize:13,fontFamily:fontSans }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {genError&&<div style={{ color:T.danger,fontSize:13,marginBottom:10,padding:"8px 12px",background:T.dangerLight,borderRadius:7 }}>⚠ {genError}</div>}
+              <Btn onClick={generateContent} disabled={genLoading||!genTopic.trim()} style={{ minWidth:160,justifyContent:"center" }}>
+                {genLoading?(
+                  <span style={{ display:"flex",alignItems:"center",gap:8 }}>
+                    <span style={{ width:14,height:14,border:`2px solid white`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 0.7s linear infinite",display:"inline-block" }}/>
+                    Generating...
+                  </span>
+                ):"✨ Generate with AI"}
+              </Btn>
+            </Card>
+
+            {/* Preview */}
+            {genPreview&&(
+              <Card style={{ padding:24,border:`1.5px solid ${T.accent}` }}>
+                <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14 }}>
+                  <div>
+                    <div style={{ fontFamily:font,fontSize:17,color:T.text,fontWeight:600 }}>Generated Preview</div>
+                    <div style={{ color:T.muted,fontSize:12 }}>Review before publishing to the content library</div>
+                  </div>
+                  <Tag label="AI Generated" color="#8b5cf6"/>
+                </div>
+                {genType==="case"&&!Array.isArray(genPreview)?(
+                  <div>
+                    <div style={{ display:"flex",gap:6,marginBottom:12 }}>
+                      <Tag label={genPreview.topic} color={topicColor(genPreview.topic)}/><Tag label={genPreview.difficulty} color={diffColor(genPreview.difficulty)}/><Tag label={genPreview.species} color={T.muted}/>
+                    </div>
+                    <div style={{ fontFamily:font,fontSize:18,fontWeight:600,color:T.text,marginBottom:8 }}>{genPreview.title}</div>
+                    <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
+                      {[["Signalment",genPreview.signalment],["Presenting Complaint",genPreview.presenting_complaint],["History",genPreview.history],["Physical Exam",genPreview.physical_exam]].map(([l,v])=>(
+                        <div key={l} style={{ background:T.surface2,borderRadius:8,padding:12 }}>
+                          <div style={{ fontSize:11,fontWeight:600,color:T.muted,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:4 }}>{l}</div>
+                          <div style={{ fontSize:13,color:T.text2,lineHeight:1.5 }}>{v}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginTop:10,padding:"10px 12px",background:"#fef9c3",borderRadius:8,fontSize:13,color:"#854d0e" }}>
+                      <strong>Diagnosis:</strong> {genPreview.diagnosis} · <strong>Reference:</strong> {genPreview.reference}
+                    </div>
+                  </div>
+                ):(
+                  <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+                    {(Array.isArray(genPreview)?genPreview:[genPreview]).map((q,i)=>(
+                      <div key={i} style={{ background:T.surface2,borderRadius:9,padding:"14px 16px" }}>
+                        <div style={{ fontSize:14,fontWeight:500,color:T.text,marginBottom:8 }}>{i+1}. {q.question}</div>
+                        <div style={{ display:"flex",flexDirection:"column",gap:4 }}>
+                          {q.options?.map((o,j)=><div key={j} style={{ fontSize:13,color:j===q.correct?T.success:T.text2,fontWeight:j===q.correct?600:400 }}>{String.fromCharCode(65+j)}. {o}{j===q.correct?" ✓":""}</div>)}
+                        </div>
+                        <div style={{ marginTop:8,fontSize:12,color:T.muted }}>📖 {q.reference}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Divider/>
+                <div style={{ display:"flex",gap:8 }}>
+                  <Btn onClick={publishGenerated}>Publish to library →</Btn>
+                  <Btn variant="secondary" onClick={()=>setGenPreview(null)}>Discard</Btn>
+                  <Btn variant="ghost" onClick={generateContent}>Regenerate</Btn>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
+      </PageWrap>
+    );
+  }
+
+  return null;
+}
+
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(VetMentor));
+
+</script>
+</body>
+</html>
